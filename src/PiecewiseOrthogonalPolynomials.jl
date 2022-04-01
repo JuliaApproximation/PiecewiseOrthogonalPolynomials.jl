@@ -105,6 +105,8 @@ end
 
 getindex(P::AbstractPiecewisePolynomial, x::Number, k::Int) = P[x, findblockindex(axes(P, 2), k)]
 
+factorize(V::SubQuasiArray{T,2,<:ContinuousPolynomial{0},<:Tuple{Inclusion,BlockSlice}}) where {T} =
+    factorize(view(PiecewisePolynomial(parent(V)), parentindices(V)...))
 grid(V::SubQuasiArray{T,2,<:ContinuousPolynomial{0},<:Tuple{Inclusion,BlockSlice}}) where {T} =
     grid(view(PiecewisePolynomial(parent(V)), parentindices(V)...))
 

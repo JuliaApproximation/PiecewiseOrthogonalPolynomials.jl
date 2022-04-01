@@ -1,7 +1,7 @@
-name = "PiecewiseSpectralMethods"
+name = "PiecewiseOrthogonalPolynomials"
 uuid = "4461d12d-4663-4550-8580-cb764c85e20f"
 authors = ["Sheehan Olver <solver@mac.com>"]
-version = "0.1.0"
+version = "0.0.1"
 
 [deps]
 BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
