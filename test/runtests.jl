@@ -1,4 +1,4 @@
-using PiecewiseSpectralMethods, ClassicalOrthogonalPolynomials, Test
+using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, Test
 
 
 @testset "transform" begin

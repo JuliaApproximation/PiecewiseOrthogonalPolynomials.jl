@@ -1,4 +1,4 @@
-module PiecewiseSpectralMethods
+module PiecewiseOrthogonalPolynomials
 using ClassicalOrthogonalPolynomials, LinearAlgebra, BlockArrays, BlockBandedMatrices, ContinuumArrays, QuasiArrays, LazyArrays, LazyBandedMatrices, FillArrays
 
 import BlockArrays: BlockSlice, block, blockindex, blockvec
