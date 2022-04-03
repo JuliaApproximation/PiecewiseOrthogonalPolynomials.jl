@@ -1,2 +1,2 @@
-# PiecewiseSpectralMethods.jl
-A Julia package for piecewise spectral methods such as p-FEM
+# PiecewiseOrthogonalPolynomials.jl
+A Julia package for piecewise orthogonal polynomials which can be used in p-FEM
