@@ -153,7 +153,7 @@ end
 end
 
 
-@simplify function *(Ac::QuasiAdjoint{<:Any,<:ContinuousPolynomial{1}}, B::ContinuousPolynomial{1})
+@simplify function *(Ac::QuasiAdjoint{<:Any,<:ContinuousPolynomial}, B::ContinuousPolynomial)
     A = Ac'
     P = ContinuousPolynomial{0}(A)
     Q = ContinuousPolynomial{0}(B)
