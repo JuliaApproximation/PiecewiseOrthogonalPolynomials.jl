@@ -40,7 +40,7 @@ end
         C = ContinuousPolynomial{1}(r)
         P'P
         C'C
-        @TEST (P'C)[Block.(1:10),Block.(1:10)] ≈ (C'P)[Block.(1:10),Block.(1:10)]
+        @test (P'C)[Block.(1:10),Block.(1:10)] ≈ (C'P)[Block.(1:10),Block.(1:10)]
         
     end
 end
