@@ -38,9 +38,11 @@ end
     for r in (range(-1,1; length=2), range(0,1; length=4), range(0, 1; length=4))
         P = ContinuousPolynomial{0}(r)
         C = ContinuousPolynomial{1}(r)
-        P'P
-        C'C
-        @test (P'C)[Block.(1:10),Block.(1:10)] ≈ (C'P)[Block.(1:10),Block.(1:10)]
+        JR = Block.(1:10)
+        KR = Block.(1:11)
+        R = P\C
+        @test R[KR,JR]'*((P'P)[KR,KR]*R[KR,JR]) ≈ (C'C)[JR,JR]
+        @test (P'C)[JR,JR] ≈ (C'P)[JR,JR]'
         
     end
 end
