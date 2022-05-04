@@ -57,5 +57,5 @@ end
     C = ContinuousPolynomial{1}(r)
     x = axes(C,1)
     D = Derivative(x)
-    (D*C)'*(D*C) + C'C
+    -(D*C)'*(D*C) + C'C
 end
