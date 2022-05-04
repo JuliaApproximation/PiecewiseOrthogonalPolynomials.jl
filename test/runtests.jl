@@ -61,5 +61,7 @@ end
     C = ContinuousPolynomial{1}(r)
     x = axes(C,1)
     D = Derivative(x)
-    -(D*C)'*(D*C) + C'C
+    L = -(D*C)'*(D*C) + C'C
+    KR = Block.(1:10)
+    @time L[KR,KR]
 end
