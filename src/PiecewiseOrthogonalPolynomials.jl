@@ -135,7 +135,7 @@ function \(P::ContinuousPolynomial{0}, C::ContinuousPolynomial{1})
     H3 = BlockBroadcastArray(hcat, z, -v)
     M3 = BlockVcat(Hcat(Ones{T}(N) / 2, -Ones{T}(N) / 2), H3)
     dat = BlockHcat(M1, M2, M3)'
-    _BandedBlockBandedMatrix(dat, (axes(P, 2), axes(C, 2)), (1, 1), (0, 1))
+    _BandedBlockBandedMatrix(dat, axes(P, 2), (1, 1), (0, 1))
 end
 
 ######
