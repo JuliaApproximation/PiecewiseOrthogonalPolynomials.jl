@@ -7,7 +7,7 @@ import ClassicalOrthogonalPolynomials: grid, massmatrix
 import ContinuumArrays: @simplify, factorize, TransformFactorization
 import Base: axes, getindex, ==, \, OneTo
 
-export PiecewisePolynomial, ContinuousPolynomial
+export PiecewisePolynomial, ContinuousPolynomial, Derivative, Block
 
 abstract type AbstractPiecewisePolynomial{order,T,P<:AbstractVector} <: Basis{T} end
 

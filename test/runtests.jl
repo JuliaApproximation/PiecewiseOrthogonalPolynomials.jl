@@ -57,11 +57,13 @@ end
 end
 
 @testset "weak Laplacian" begin
-    r = range(0,1; length=4)
+    r = range(0,1; length=5)
     C = ContinuousPolynomial{1}(r)
     x = axes(C,1)
     D = Derivative(x)
-    L = -(D*C)'*(D*C) + C'C
+    Δ = -(D*C)'*(D*C)
+    M = C'C
+    L = Δ + M
     KR = Block.(1:10)
     @time L[KR,KR]
 end
