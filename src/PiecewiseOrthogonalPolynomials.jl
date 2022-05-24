@@ -4,12 +4,17 @@ using ClassicalOrthogonalPolynomials, LinearAlgebra, BlockArrays, BlockBandedMat
 import BlockArrays: BlockSlice, block, blockindex, blockvec
 import BlockBandedMatrices: _BandedBlockBandedMatrix
 import ClassicalOrthogonalPolynomials: grid, massmatrix
-import ContinuumArrays: @simplify, factorize, TransformFactorization
+import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBasisLayout, MemoryLayout, layout_broadcasted, ExpansionLayout, basis
+import LazyArrays: paddeddata
+import LazyBandedMatrices: BlockBroadcastMatrix
 import Base: axes, getindex, ==, \, OneTo
 
 export PiecewisePolynomial, ContinuousPolynomial, Derivative, Block
 
 abstract type AbstractPiecewisePolynomial{order,T,P<:AbstractVector} <: Basis{T} end
+
+struct PiecewisePolynomialLayout{order} <: AbstractBasisLayout end
+MemoryLayout(::Type{<:AbstractPiecewisePolynomial{order}}) where order = PiecewisePolynomialLayout{order}()
 
 struct PiecewisePolynomial{T,Bas,P<:AbstractVector} <: AbstractPiecewisePolynomial{0,T,P}
     basis::Bas
@@ -178,6 +183,28 @@ end
     P * _BandedBlockBandedMatrix(M', (axes(P, 2), axes(C, 2)), (0, 0), (0, 1))
 end
 
+
+### multiplication
+
+function layout_broadcasted(::Tuple{ExpansionLayout{PiecewisePolynomialLayout{0}},PiecewisePolynomialLayout{0}}, ::typeof(*), a, P)
+    @assert basis(a) == P
+    _,c = a.args
+    T = eltype(c)
+    m = length(P.points)
+    B = PiecewisePolynomial(P).basis
+
+    ops = [(cₖ = [paddeddata(c)[k:m-1:end]; Zeros{T}(∞)];
+            aₖ = B  * cₖ;
+            unitblocks(B \ (aₖ .* B))) for k = 1:m-1]
+
+    P * BlockBroadcastMatrix{T}(Diagonal, ops...)
+end
+
+
+function layout_broadcasted(::Tuple{ExpansionLayout{PiecewisePolynomialLayout{0}},PiecewisePolynomialLayout{1}}, ::typeof(*), a, C)
+    P = ContinuousPolynomial{0}(C)
+    (a .* P) * (P \ C)
+end
 
 
 end # module
