@@ -1,4 +1,4 @@
-using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, BlockArrays, Test
+using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, BlockArrays, Test, FillArrays
 
 
 @testset "transform" begin
@@ -54,6 +54,19 @@ end
     x = axes(C,1)
     D = Derivative(x)
     P\D*C
+end
+
+@testset "multiplication" begin
+    r = range(-1,1; length=4)
+    P = ContinuousPolynomial{0}(r)
+    C = ContinuousPolynomial{1}(r)
+    x = axes(P,1)
+    a = P / P \ broadcast(x -> abs(x) ≤ 1/3 ? 1.0 : 0.5, x)
+    @test (P \ (a .* P))[Block.(1:2), Block.(1:2)] ≈ Diagonal([0.5,1,0.5,0.5,1,0.5])
+
+    c = [randn(4); Zeros(∞)]
+    @test ((a .* C) * c)[0.1] ≈ (C*c)[0.1]
+    @test ((a .* C) * c)[0.4] ≈ (C*c)[0.4]/2
 end
 
 @testset "weak Laplacian" begin
