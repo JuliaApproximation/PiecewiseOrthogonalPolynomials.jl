@@ -3,7 +3,7 @@ using ClassicalOrthogonalPolynomials, LinearAlgebra, BlockArrays, BlockBandedMat
 
 import BlockArrays: BlockSlice, block, blockindex, blockvec
 import BlockBandedMatrices: _BandedBlockBandedMatrix
-import ClassicalOrthogonalPolynomials: grid, massmatrix
+import ClassicalOrthogonalPolynomials: grid, massmatrix, ldiv, pad
 import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBasisLayout, MemoryLayout, layout_broadcasted, ExpansionLayout, basis
 import LazyArrays: paddeddata
 import LazyBandedMatrices: BlockBroadcastMatrix
@@ -114,6 +114,29 @@ factorize(V::SubQuasiArray{T,2,<:ContinuousPolynomial{0},<:Tuple{Inclusion,Block
     factorize(view(PiecewisePolynomial(parent(V)), parentindices(V)...))
 grid(V::SubQuasiArray{T,2,<:ContinuousPolynomial{0},<:Tuple{Inclusion,BlockSlice}}) where {T} =
     grid(view(PiecewisePolynomial(parent(V)), parentindices(V)...))
+
+function ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiVector) where V
+    T = promote_type(V, eltype(f))
+    C₀ = ContinuousPolynomial{0,V}(Q.points)
+    M = length(Q.points)-1
+
+    c = C₀\f
+    c̃ = paddeddata(c)
+    N = div(length(c̃), M, RoundUp) # degree
+    P = Legendre{T}()
+    W = Weighted(Jacobi{T}(1,1))
+    
+    R̃ = [[T[1 1; -1 1]/2; Zeros{T}(∞,2)] (P \ W)]
+    dat = R̃[1:N,1:N] \ reshape(pad(c̃, M*N), M, N)'
+    cfs = [dat[1,1]]
+    for j = 1:M-1
+        dat[2,j] ≈ dat[1,j+1] || throw(ArgumentError("Discontinuity in data."))
+    end
+    for j = 1:M
+        push!(cfs, dat[2,j])
+    end
+    pad(append!(cfs, vec(dat[3:end,:]')), axes(Q,2))
+end
 
 function grid(V::SubQuasiArray{T,2,<:ContinuousPolynomial{1},<:Tuple{Inclusion,BlockSlice}}) where {T}
     P = parent(V)
