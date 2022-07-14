@@ -80,3 +80,17 @@ end
     KR = Block.(1:10)
     @time L[KR,KR]
 end
+
+@testset "conversion" begin
+    r = range(0,1; length=5)
+    C = ContinuousPolynomial{1}(r)
+    P = ContinuousPolynomial{0}(r)
+    c = [randn(5); zeros(∞)]
+    g = C * c
+    @test C \ g ≈ c
+    g̃ = P / P \ g
+    @test g[0.1] ≈ g̃[0.1]
+    x = axes(C,1)
+    e = C / C \ exp.(x)
+    @test e[[0.1,0.7]] ≈ exp.([0.1,0.7])
+end
