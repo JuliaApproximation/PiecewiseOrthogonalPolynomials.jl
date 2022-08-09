@@ -1,4 +1,4 @@
-using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, BlockArrays, Test, FillArrays, LinearAlgebra
+using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, BlockArrays, Test, FillArrays, LinearAlgebra, StaticArrays
 
 
 @testset "transform" begin
@@ -93,4 +93,13 @@ end
     x = axes(C,1)
     e = C / C \ exp.(x)
     @test e[[0.1,0.7]] ≈ exp.([0.1,0.7])
+end
+
+@testset "static broadcast" begin
+    C = ContinuousPolynomial{1}(range(0,1; length=4))
+    x = SVector(0.1, 0.2)
+    @test view(C, x, 1) .* view(C, x, 1) ≈ C[x,1] .* C[x,1]
+
+    @test C \ (C[:,1] .* C[:,1]) ≈ [1; zeros(3); -1/4; zeros(∞)]
+    @test C \ (C[:,1] .* C[:,3]) ≈ zeros(∞)
 end

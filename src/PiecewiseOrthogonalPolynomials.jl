@@ -44,6 +44,14 @@ function grid(V::SubQuasiArray{T,2,<:PiecewisePolynomial,<:Tuple{Inclusion,Block
     repeatgrid(axes(P.basis, 1), g, P.points)
 end
 
+function grid(V::SubQuasiArray{T,N,<:PiecewisePolynomial,<:Tuple{Inclusion,Any}}) where {T,N}
+    P = parent(V)
+    kr,jr = parentindices(V)
+    J = findblock(axes(P,2), last(jr))
+    grid(view(P, kr, Block(1):J))
+end
+
+
 struct ApplyFactorization{T, FF, FAC<:Factorization{T}} <: Factorization{T}
     f::FF
     F::FAC
@@ -68,7 +76,8 @@ end
 
 ContinuousPolynomial{o,T}(pts::P) where {o,T,P} = ContinuousPolynomial{o,T,P}(pts)
 ContinuousPolynomial{o}(pts) where {o} = ContinuousPolynomial{o,Float64}(pts)
-ContinuousPolynomial{o}(P::ContinuousPolynomial) where {o} = ContinuousPolynomial{o,eltype(P)}(P.points)
+ContinuousPolynomial{o,T}(P::ContinuousPolynomial) where {o,T} = ContinuousPolynomial{o,T}(P.points)
+ContinuousPolynomial{o}(P::ContinuousPolynomial) where {o} = ContinuousPolynomial{o,eltype(P)}(P)
 
 PiecewisePolynomial(P::ContinuousPolynomial{0,T}) where {T} = PiecewisePolynomial(Legendre{T}(), P.points)
 
@@ -110,14 +119,16 @@ end
 
 getindex(P::AbstractPiecewisePolynomial, x::Number, k::Int) = P[x, findblockindex(axes(P, 2), k)]
 
-factorize(V::SubQuasiArray{T,2,<:ContinuousPolynomial{0},<:Tuple{Inclusion,BlockSlice}}) where {T} =
+factorize(V::SubQuasiArray{T,N,<:ContinuousPolynomial{0},<:Tuple{Inclusion,BlockSlice}}) where {T,N} =
     factorize(view(PiecewisePolynomial(parent(V)), parentindices(V)...))
-grid(V::SubQuasiArray{T,2,<:ContinuousPolynomial{0},<:Tuple{Inclusion,BlockSlice}}) where {T} =
+grid(V::SubQuasiArray{T,N,<:ContinuousPolynomial{0},<:Tuple{Inclusion,Any}}) where {T,N} =
     grid(view(PiecewisePolynomial(parent(V)), parentindices(V)...))
+grid(V::SubQuasiArray{T,N,<:ContinuousPolynomial,<:Tuple{Inclusion,Any}}) where {T,N} =
+    grid(view(ContinuousPolynomial{0,T}(parent(V)), parentindices(V)...))    
 
 function ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiVector) where V
     T = promote_type(V, eltype(f))
-    C₀ = ContinuousPolynomial{0,V}(Q.points)
+    C₀ = ContinuousPolynomial{0,V}(Q)
     M = length(Q.points)-1
 
     c = C₀\f
@@ -128,12 +139,15 @@ function ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiVector) where V
     
     R̃ = [[T[1 1; -1 1]/2; Zeros{T}(∞,2)] (P \ W)]
     dat = R̃[1:N,1:N] \ reshape(pad(c̃, M*N), M, N)'
-    cfs = [dat[1,1]]
-    for j = 1:M-1
-        dat[2,j] ≈ dat[1,j+1] || throw(ArgumentError("Discontinuity in data."))
-    end
-    for j = 1:M
-        push!(cfs, dat[2,j])
+    cfs = T[]
+    if size(dat,1) ≥ 1
+        push!(cfs, dat[1,1])
+        for j = 1:M-1
+            isapprox(dat[2,j], dat[1,j+1]; atol=100eps()) || throw(ArgumentError("Discontinuity in data."))
+        end
+        for j = 1:M
+            push!(cfs, dat[2,j])
+        end
     end
     pad(append!(cfs, vec(dat[3:end,:]')), axes(Q,2))
 end
