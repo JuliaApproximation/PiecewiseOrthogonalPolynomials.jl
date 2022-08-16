@@ -62,12 +62,23 @@ end
 \(P::ApplyFactorization, f) = P.f(P.F \ f)
 
 
+_perm_blockvec(X::AbstractMatrix) = blockvec(permutedims(X))
+function _perm_blockvec(X::AbstractArray{T,3}) where T
+    X1 = _perm_blockvec(X[:,:,1])
+    ret = PseudoBlockMatrix{T}(undef, (axes(X1,1), axes(X,3)))
+    ret[:,1] = X1
+    for k = 2:size(X,3)
+        ret[:,k] = _perm_blockvec(X[:,:,k])
+    end
+    ret
+end
+
 function factorize(V::SubQuasiArray{<:Any,2,<:PiecewisePolynomial,<:Tuple{Inclusion,BlockSlice}}, dims...)
     P = parent(V)
     _,JR = parentindices(V)
     N = Int(last(JR.block))
-    F = factorize(P.basis[:,OneTo(N)], length(P.points)-1, dims...)
-    ApplyFactorization(v -> blockvec(permutedims(v)), TransformFactorization(repeatgrid(axes(P.basis, 1), F.grid, P.points), F.plan))
+    x,F = plan_transform(P.basis, Array{eltype(P)}(undef, N, length(P.points)-1, dims...), 1)
+    ApplyFactorization(_perm_blockvec, TransformFactorization(repeatgrid(axes(P.basis, 1), x, P.points), F))
 end
 
 
@@ -154,32 +165,8 @@ function adaptivetransform_ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiVe
     pad(append!(cfs, vec(dat[3:end,:]')), axes(Q,2))
 end
 
-function adaptivetransform_ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiMatrix) where V
-    error("hello")
-    T = promote_type(V, eltype(f))
-    C₀ = ContinuousPolynomial{0,V}(Q)
-    M = length(Q.points)-1
-
-    c = C₀\f
-    c̃ = paddeddata(c)
-    N = div(length(c̃), M, RoundUp) # degree
-    P = Legendre{T}()
-    W = Weighted(Jacobi{T}(1,1))
-    
-    R̃ = [[T[1 1; -1 1]/2; Zeros{T}(∞,2)] (P \ W)]
-    dat = R̃[1:N,1:N] \ reshape(pad(c̃, M*N), M, N)'
-    cfs = T[]
-    if size(dat,1) ≥ 1
-        push!(cfs, dat[1,1])
-        for j = 1:M-1
-            isapprox(dat[2,j], dat[1,j+1]; atol=100eps()) || throw(ArgumentError("Discontinuity in data."))
-        end
-        for j = 1:M
-            push!(cfs, dat[2,j])
-        end
-    end
-    pad(append!(cfs, vec(dat[3:end,:]')), axes(Q,2))
-end
+adaptivetransform_ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiMatrix) where V =
+    BlockBroadcastArray(hcat, (Q \ f[:,j] for j = axes(f,2))...)
 
 function grid(V::SubQuasiArray{T,2,<:ContinuousPolynomial{1},<:Tuple{Inclusion,BlockSlice}}) where {T}
     P = parent(V)

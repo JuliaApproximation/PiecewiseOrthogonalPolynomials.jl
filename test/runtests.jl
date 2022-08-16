@@ -24,7 +24,7 @@ using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, BlockArray
     @testset "matrix" begin
         P = PiecewisePolynomial(Chebyshev(), range(0,1; length=3))
         @test P[:,Block.(Base.OneTo(3))] \ P[:,1:2] == Eye(6,2)
-        P[:,Block.(Base.OneTo(3))] \ (P[:,2] .* P[:,1:2])
+        @test P[:,Block.(Base.OneTo(3))] \ (P[:,2] .* P[:,1:2]) ≈ P[:,Block.(Base.OneTo(3))] \ (P[:,2] .* P[:,Block(1)]) ≈ [P[:,Block.(Base.OneTo(3))]\(P[:,2] .* P[:,1]) P[:,Block.(Base.OneTo(3))]\(P[:,2] .* P[:,2])] 
     end
 end
 
@@ -111,6 +111,26 @@ end
 end
 
 @testset "variable coefficients" begin
-    C = ContinuousPolynomial{1}(range(0,1; length=4))
-    C \ (C[:,1] .* C[:,1:2])
+    C = ContinuousPolynomial{1}(range(-1,1; length=2))
+    a = expand(C, x -> (1-x^2)*exp(x))
+
+    ã = Jacobi(1,1) / Jacobi(1,1) \ a
+
+    Jacobi(1,1) \ (ã .* Jacobi(1,1))
+
+    (C \ (a .* C[:,Block(1)]))
+
+    # C * 
+
+    (C \ (C[:,1] .* C[:,Block(1)]))
+    
+    X = jacobimatrix(Jacobi(1,1))
+    (I-X)/2
+    (I+X)/2
+
+    (C \ (C[:,Block(4)[1]] .* C[:,Block(1)]))
+
+    x = axes(C,1)
+    C \ (x .* C[:,Block.(1:3)])
+    C \ (x .* C[:,Block(2)])
 end
