@@ -19,7 +19,13 @@ using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, BlockArray
     x = axes(P,1)
     @test P[:,Block.(Base.OneTo(3))] \ x ≈ (P\ x)[Block.(1:3)]
     @test (P/P\x)[0.1] ≈ 0.1
-    @test (P/P\exp.(x))[0.1] ≈ exp(0.1)    
+    @test (P/P\exp.(x))[0.1] ≈ exp(0.1)
+
+    @testset "matrix" begin
+        P = PiecewisePolynomial(Chebyshev(), range(0,1; length=3))
+        @test P[:,Block.(Base.OneTo(3))] \ P[:,1:2] == Eye(6,2)
+        P[:,Block.(Base.OneTo(3))] \ (P[:,2] .* P[:,1:2])
+    end
 end
 
 @testset "lowering" begin
@@ -43,7 +49,7 @@ end
         R = P\C
         @test R[KR,JR]'*((P'P)[KR,KR]*R[KR,JR]) ≈ (C'C)[JR,JR]
         @test (P'C)[JR,JR] ≈ (C'P)[JR,JR]'
-        
+
     end
 end
 
@@ -102,4 +108,9 @@ end
 
     @test C \ (C[:,1] .* C[:,1]) ≈ [1; zeros(3); -1/4; zeros(∞)]
     @test C \ (C[:,1] .* C[:,3]) ≈ zeros(∞)
+end
+
+@testset "variable coefficients" begin
+    C = ContinuousPolynomial{1}(range(0,1; length=4))
+    C \ (C[:,1] .* C[:,1:2])
 end
