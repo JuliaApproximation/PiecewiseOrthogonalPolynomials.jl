@@ -94,8 +94,8 @@ ContinuousPolynomial{o}(P::ContinuousPolynomial) where {o} = ContinuousPolynomia
 
 PiecewisePolynomial(P::ContinuousPolynomial{0,T}) where {T} = PiecewisePolynomial(Legendre{T}(), P.points)
 
-axes(B::ContinuousPolynomial{0}) where {o} = axes(PiecewisePolynomial(B))
-axes(B::ContinuousPolynomial{1}) where {o} =
+axes(B::ContinuousPolynomial{0}) = axes(PiecewisePolynomial(B))
+axes(B::ContinuousPolynomial{1}) =
     (Inclusion(first(B.points) .. last(B.points)), blockedrange(Vcat(length(B.points), Fill(length(B.points) - 1, ∞))))
 
 ==(::PiecewisePolynomial, ::ContinuousPolynomial{1}) = false
