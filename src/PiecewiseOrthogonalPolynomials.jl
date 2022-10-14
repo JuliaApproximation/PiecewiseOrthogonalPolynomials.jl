@@ -4,7 +4,7 @@ using ClassicalOrthogonalPolynomials, LinearAlgebra, BlockArrays, BlockBandedMat
 import BlockArrays: BlockSlice, block, blockindex, blockvec
 import BlockBandedMatrices: _BandedBlockBandedMatrix
 import ClassicalOrthogonalPolynomials: grid, massmatrix, ldiv, pad, adaptivetransform_ldiv
-import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBasisLayout, MemoryLayout, layout_broadcasted, ExpansionLayout, basis
+import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBasisLayout, MemoryLayout, layout_broadcasted, ExpansionLayout, basis, plan_grid_transform
 import LazyArrays: paddeddata
 import LazyBandedMatrices: BlockBroadcastMatrix
 import Base: axes, getindex, ==, \, OneTo
@@ -77,7 +77,7 @@ function factorize(V::SubQuasiArray{<:Any,2,<:PiecewisePolynomial,<:Tuple{Inclus
     P = parent(V)
     _,JR = parentindices(V)
     N = Int(last(JR.block))
-    x,F = plan_transform(P.basis, Array{eltype(P)}(undef, N, length(P.points)-1, dims...), 1)
+    x,F = plan_grid_transform(P.basis, Array{eltype(P)}(undef, N, length(P.points)-1, dims...), 1)
     ApplyFactorization(_perm_blockvec, TransformFactorization(repeatgrid(axes(P.basis, 1), x, P.points), F))
 end
 
@@ -156,7 +156,7 @@ function adaptivetransform_ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiVe
     if size(dat,1) ≥ 1
         push!(cfs, dat[1,1])
         for j = 1:M-1
-            isapprox(dat[2,j], dat[1,j+1]; atol=100eps()) || throw(ArgumentError("Discontinuity in data."))
+            isapprox(dat[2,j], dat[1,j+1]; atol=1000eps()) || throw(ArgumentError("Discontinuity in data."))
         end
         for j = 1:M
             push!(cfs, dat[2,j])
