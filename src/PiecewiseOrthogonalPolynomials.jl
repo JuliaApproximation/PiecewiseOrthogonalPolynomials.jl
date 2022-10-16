@@ -98,9 +98,12 @@ axes(B::ContinuousPolynomial{0}) = axes(PiecewisePolynomial(B))
 axes(B::ContinuousPolynomial{1}) =
     (Inclusion(first(B.points) .. last(B.points)), blockedrange(Vcat(length(B.points), Fill(length(B.points) - 1, ∞))))
 
+==(P::PiecewisePolynomial, C::ContinuousPolynomial{0}) = P == PiecewisePolynomial(C)
+==(C::ContinuousPolynomial{0}, P::PiecewisePolynomial) = PiecewisePolynomial(C) == P
 ==(::PiecewisePolynomial, ::ContinuousPolynomial{1}) = false
 ==(::ContinuousPolynomial{1}, ::PiecewisePolynomial) = false
 ==(A::ContinuousPolynomial{o}, B::ContinuousPolynomial{o}) where o = A.points == B.points
+==(A::ContinuousPolynomial, B::ContinuousPolynomial) = false
 
 function getindex(P::PiecewisePolynomial{T}, x::Number, Kk::BlockIndex{1}) where {T}
     K, k = block(Kk), blockindex(Kk)
@@ -170,7 +173,7 @@ adaptivetransform_ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiMatrix) whe
 
 function grid(V::SubQuasiArray{T,2,<:ContinuousPolynomial{1},<:Tuple{Inclusion,BlockSlice}}) where {T}
     P = parent(V)
-    _, JR = parentindices(Q)
+    _, JR = parentindices(V)
     pts = P.points
     grid(view(PiecewisePolynomial(Weighted(Jacobi{T}(1, 1)), pts), :, JR))
 end

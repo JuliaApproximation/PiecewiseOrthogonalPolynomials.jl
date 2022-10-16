@@ -1,5 +1,5 @@
 using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, BlockArrays, Test, FillArrays, LinearAlgebra, StaticArrays, ContinuumArrays
-
+import Base: OneTo
 
 @testset "transform" begin
     for r in (range(-1, 1; length=2), range(-1, 1; length=4), range(0, 1; length=4)), T in (Chebyshev(), Legendre())
@@ -15,7 +15,13 @@ using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, BlockArray
     @time u = Pₙ / Pₙ \ cos.(10_000x.^2);
     @test u[0.1] ≈ cos(10_000*0.1^2)
 
+    r = range(-1, 1; length=10)
+    P = PiecewisePolynomial(Chebyshev(), r); Pₙ = P[:,Block.(1:3)]; x = axes(P,1)
+    @test grid(P[:,1:27]) == grid(Pₙ)
+
     P = ContinuousPolynomial{0}(r)
+    @test_broken grid(P[:,Block.(OneTo(3))]) == grid(PiecewisePolynomial(P)[:,Block.(OneTo(3))]) == grid(ContinuousPolynomial{1}(r)[:,Block.(OneTo(3))])
+    @test grid(P[:,1:5]) == grid(PiecewisePolynomial(P)[:,1:5]) == grid(ContinuousPolynomial{1}(r)[:,1:5])
     x = axes(P,1)
     @test P[:,Block.(Base.OneTo(3))] \ x ≈ (P\ x)[Block.(1:3)]
     @test (P/P\x)[0.1] ≈ 0.1
@@ -44,6 +50,14 @@ end
     for r in (range(-1,1; length=2), range(0,1; length=4), range(0, 1; length=4))
         P = ContinuousPolynomial{0}(r)
         C = ContinuousPolynomial{1}(r)
+
+        @test P ≠ C
+        @test C ≠ P
+        @test P == PiecewisePolynomial(P)
+        @test PiecewisePolynomial(P) == P
+        @test C ≠ PiecewisePolynomial(P)
+        @test PiecewisePolynomial(P) ≠ C
+
         JR = Block.(1:10)
         KR = Block.(1:11)
         R = P\C
