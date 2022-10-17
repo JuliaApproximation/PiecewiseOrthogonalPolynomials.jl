@@ -3,8 +3,8 @@ using ClassicalOrthogonalPolynomials, LinearAlgebra, BlockArrays, BlockBandedMat
 
 import BlockArrays: BlockSlice, block, blockindex, blockvec
 import BlockBandedMatrices: _BandedBlockBandedMatrix
-import ClassicalOrthogonalPolynomials: grid, massmatrix, ldiv, pad
-import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBasisLayout, MemoryLayout, layout_broadcasted, ExpansionLayout, basis
+import ClassicalOrthogonalPolynomials: grid, massmatrix, ldiv, pad, adaptivetransform_ldiv
+import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBasisLayout, MemoryLayout, layout_broadcasted, ExpansionLayout, basis, plan_grid_transform
 import LazyArrays: paddeddata
 import LazyBandedMatrices: BlockBroadcastMatrix
 import Base: axes, getindex, ==, \, OneTo
@@ -28,6 +28,8 @@ PiecewisePolynomial(basis::AbstractQuasiMatrix{T}, points::AbstractVector) where
 
 axes(B::PiecewisePolynomial) = (Inclusion(first(B.points) .. last(B.points)), blockedrange(Fill(length(B.points) - 1, ∞)))
 
+==(P::PiecewisePolynomial, Q::PiecewisePolynomial) = P.basis == Q.basis && P.points == Q.points
+
 function repeatgrid(ax, g, pts)
     ret = Matrix{eltype(g)}(undef, length(g), length(pts) - 1)
     for j in axes(ret, 2)
@@ -44,6 +46,14 @@ function grid(V::SubQuasiArray{T,2,<:PiecewisePolynomial,<:Tuple{Inclusion,Block
     repeatgrid(axes(P.basis, 1), g, P.points)
 end
 
+function grid(V::SubQuasiArray{T,N,<:PiecewisePolynomial,<:Tuple{Inclusion,Any}}) where {T,N}
+    P = parent(V)
+    kr,jr = parentindices(V)
+    J = findblock(axes(P,2), last(jr))
+    grid(view(P, kr, Block(1):J))
+end
+
+
 struct ApplyFactorization{T, FF, FAC<:Factorization{T}} <: Factorization{T}
     f::FF
     F::FAC
@@ -52,12 +62,23 @@ end
 \(P::ApplyFactorization, f) = P.f(P.F \ f)
 
 
-function factorize(V::SubQuasiArray{<:Any,2,<:PiecewisePolynomial,<:Tuple{Inclusion,BlockSlice}})
+_perm_blockvec(X::AbstractMatrix) = blockvec(permutedims(X))
+function _perm_blockvec(X::AbstractArray{T,3}) where T
+    X1 = _perm_blockvec(X[:,:,1])
+    ret = PseudoBlockMatrix{T}(undef, (axes(X1,1), axes(X,3)))
+    ret[:,1] = X1
+    for k = 2:size(X,3)
+        ret[:,k] = _perm_blockvec(X[:,:,k])
+    end
+    ret
+end
+
+function factorize(V::SubQuasiArray{<:Any,2,<:PiecewisePolynomial,<:Tuple{Inclusion,BlockSlice}}, dims...)
     P = parent(V)
     _,JR = parentindices(V)
     N = Int(last(JR.block))
-    F = factorize(view(P.basis,:,OneTo(N)), length(P.points)-1)
-    ApplyFactorization(v -> blockvec(permutedims(v)), TransformFactorization(repeatgrid(axes(P.basis, 1), F.grid, P.points), F.plan))
+    x,F = plan_grid_transform(P.basis, Array{eltype(P)}(undef, N, length(P.points)-1, dims...), 1)
+    ApplyFactorization(_perm_blockvec, TransformFactorization(repeatgrid(axes(P.basis, 1), x, P.points), F))
 end
 
 
@@ -68,17 +89,21 @@ end
 
 ContinuousPolynomial{o,T}(pts::P) where {o,T,P} = ContinuousPolynomial{o,T,P}(pts)
 ContinuousPolynomial{o}(pts) where {o} = ContinuousPolynomial{o,Float64}(pts)
-ContinuousPolynomial{o}(P::ContinuousPolynomial) where {o} = ContinuousPolynomial{o,eltype(P)}(P.points)
+ContinuousPolynomial{o,T}(P::ContinuousPolynomial) where {o,T} = ContinuousPolynomial{o,T}(P.points)
+ContinuousPolynomial{o}(P::ContinuousPolynomial) where {o} = ContinuousPolynomial{o,eltype(P)}(P)
 
 PiecewisePolynomial(P::ContinuousPolynomial{0,T}) where {T} = PiecewisePolynomial(Legendre{T}(), P.points)
 
-axes(B::ContinuousPolynomial{0}) where {o} = axes(PiecewisePolynomial(B))
-axes(B::ContinuousPolynomial{1}) where {o} =
+axes(B::ContinuousPolynomial{0}) = axes(PiecewisePolynomial(B))
+axes(B::ContinuousPolynomial{1}) =
     (Inclusion(first(B.points) .. last(B.points)), blockedrange(Vcat(length(B.points), Fill(length(B.points) - 1, ∞))))
 
+==(P::PiecewisePolynomial, C::ContinuousPolynomial{0}) = P == PiecewisePolynomial(C)
+==(C::ContinuousPolynomial{0}, P::PiecewisePolynomial) = PiecewisePolynomial(C) == P
 ==(::PiecewisePolynomial, ::ContinuousPolynomial{1}) = false
 ==(::ContinuousPolynomial{1}, ::PiecewisePolynomial) = false
 ==(A::ContinuousPolynomial{o}, B::ContinuousPolynomial{o}) where o = A.points == B.points
+==(A::ContinuousPolynomial, B::ContinuousPolynomial) = false
 
 function getindex(P::PiecewisePolynomial{T}, x::Number, Kk::BlockIndex{1}) where {T}
     K, k = block(Kk), blockindex(Kk)
@@ -110,14 +135,16 @@ end
 
 getindex(P::AbstractPiecewisePolynomial, x::Number, k::Int) = P[x, findblockindex(axes(P, 2), k)]
 
-factorize(V::SubQuasiArray{T,2,<:ContinuousPolynomial{0},<:Tuple{Inclusion,BlockSlice}}) where {T} =
-    factorize(view(PiecewisePolynomial(parent(V)), parentindices(V)...))
-grid(V::SubQuasiArray{T,2,<:ContinuousPolynomial{0},<:Tuple{Inclusion,BlockSlice}}) where {T} =
+factorize(V::SubQuasiArray{T,N,<:ContinuousPolynomial{0},<:Tuple{Inclusion,BlockSlice}}, dims...) where {T,N} =
+    factorize(view(PiecewisePolynomial(parent(V)), parentindices(V)...), dims...)
+grid(V::SubQuasiArray{T,N,<:ContinuousPolynomial{0},<:Tuple{Inclusion,Any}}) where {T,N} =
     grid(view(PiecewisePolynomial(parent(V)), parentindices(V)...))
+grid(V::SubQuasiArray{T,N,<:ContinuousPolynomial,<:Tuple{Inclusion,Any}}) where {T,N} =
+    grid(view(ContinuousPolynomial{0,T}(parent(V)), parentindices(V)...))    
 
-function ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiVector) where V
+function adaptivetransform_ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiVector) where V
     T = promote_type(V, eltype(f))
-    C₀ = ContinuousPolynomial{0,V}(Q.points)
+    C₀ = ContinuousPolynomial{0,V}(Q)
     M = length(Q.points)-1
 
     c = C₀\f
@@ -128,19 +155,25 @@ function ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiVector) where V
     
     R̃ = [[T[1 1; -1 1]/2; Zeros{T}(∞,2)] (P \ W)]
     dat = R̃[1:N,1:N] \ reshape(pad(c̃, M*N), M, N)'
-    cfs = [dat[1,1]]
-    for j = 1:M-1
-        dat[2,j] ≈ dat[1,j+1] || throw(ArgumentError("Discontinuity in data."))
-    end
-    for j = 1:M
-        push!(cfs, dat[2,j])
+    cfs = T[]
+    if size(dat,1) ≥ 1
+        push!(cfs, dat[1,1])
+        for j = 1:M-1
+            isapprox(dat[2,j], dat[1,j+1]; atol=1000eps()) || throw(ArgumentError("Discontinuity in data."))
+        end
+        for j = 1:M
+            push!(cfs, dat[2,j])
+        end
     end
     pad(append!(cfs, vec(dat[3:end,:]')), axes(Q,2))
 end
 
+adaptivetransform_ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiMatrix) where V =
+    BlockBroadcastArray(hcat, (Q \ f[:,j] for j = axes(f,2))...)
+
 function grid(V::SubQuasiArray{T,2,<:ContinuousPolynomial{1},<:Tuple{Inclusion,BlockSlice}}) where {T}
     P = parent(V)
-    _, JR = parentindices(Q)
+    _, JR = parentindices(V)
     pts = P.points
     grid(view(PiecewisePolynomial(Weighted(Jacobi{T}(1, 1)), pts), :, JR))
 end

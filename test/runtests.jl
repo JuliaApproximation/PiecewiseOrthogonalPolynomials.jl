@@ -1,5 +1,5 @@
-using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, BlockArrays, Test, FillArrays, LinearAlgebra
-
+using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, BlockArrays, Test, FillArrays, LinearAlgebra, StaticArrays, ContinuumArrays
+import Base: OneTo
 
 @testset "transform" begin
     for r in (range(-1, 1; length=2), range(-1, 1; length=4), range(0, 1; length=4)), T in (Chebyshev(), Legendre())
@@ -15,11 +15,23 @@ using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, BlockArray
     @time u = Pₙ / Pₙ \ cos.(10_000x.^2);
     @test u[0.1] ≈ cos(10_000*0.1^2)
 
+    r = range(-1, 1; length=10)
+    P = PiecewisePolynomial(Chebyshev(), r); Pₙ = P[:,Block.(1:3)]; x = axes(P,1)
+    @test grid(P[:,1:27]) == grid(Pₙ)
+
     P = ContinuousPolynomial{0}(r)
+    @test_broken grid(P[:,Block.(OneTo(3))]) == grid(PiecewisePolynomial(P)[:,Block.(OneTo(3))]) == grid(ContinuousPolynomial{1}(r)[:,Block.(OneTo(3))])
+    @test grid(P[:,1:5]) == grid(PiecewisePolynomial(P)[:,1:5]) == grid(ContinuousPolynomial{1}(r)[:,1:5])
     x = axes(P,1)
     @test P[:,Block.(Base.OneTo(3))] \ x ≈ (P\ x)[Block.(1:3)]
     @test (P/P\x)[0.1] ≈ 0.1
-    @test (P/P\exp.(x))[0.1] ≈ exp(0.1)    
+    @test (P/P\exp.(x))[0.1] ≈ exp(0.1)
+
+    @testset "matrix" begin
+        P = PiecewisePolynomial(Chebyshev(), range(0,1; length=3))
+        @test P[:,Block.(Base.OneTo(3))] \ P[:,1:2] == Eye(6,2)
+        @test P[:,Block.(Base.OneTo(3))] \ (P[:,2] .* P[:,1:2]) ≈ P[:,Block.(Base.OneTo(3))] \ (P[:,2] .* P[:,Block(1)]) ≈ [P[:,Block.(Base.OneTo(3))]\(P[:,2] .* P[:,1]) P[:,Block.(Base.OneTo(3))]\(P[:,2] .* P[:,2])] 
+    end
 end
 
 @testset "lowering" begin
@@ -38,12 +50,20 @@ end
     for r in (range(-1,1; length=2), range(0,1; length=4), range(0, 1; length=4))
         P = ContinuousPolynomial{0}(r)
         C = ContinuousPolynomial{1}(r)
+
+        @test P ≠ C
+        @test C ≠ P
+        @test P == PiecewisePolynomial(P)
+        @test PiecewisePolynomial(P) == P
+        @test C ≠ PiecewisePolynomial(P)
+        @test PiecewisePolynomial(P) ≠ C
+
         JR = Block.(1:10)
         KR = Block.(1:11)
         R = P\C
         @test R[KR,JR]'*((P'P)[KR,KR]*R[KR,JR]) ≈ (C'C)[JR,JR]
         @test (P'C)[JR,JR] ≈ (C'P)[JR,JR]'
-        
+
     end
 end
 
@@ -93,4 +113,38 @@ end
     x = axes(C,1)
     e = C / C \ exp.(x)
     @test e[[0.1,0.7]] ≈ exp.([0.1,0.7])
+end
+
+@testset "static broadcast" begin
+    C = ContinuousPolynomial{1}(range(0,1; length=4))
+    x = SVector(0.1, 0.2)
+    @test view(C, x, 1) .* view(C, x, 1) ≈ C[x,1] .* C[x,1]
+
+    @test C \ (C[:,1] .* C[:,1]) ≈ [1; zeros(3); -1/4; zeros(∞)]
+    @test C \ (C[:,1] .* C[:,3]) ≈ zeros(∞)
+end
+
+@testset "variable coefficients" begin
+    C = ContinuousPolynomial{1}(range(-1,1; length=2))
+    a = expand(C, x -> (1-x^2)*exp(x))
+
+    ã = Jacobi(1,1) / Jacobi(1,1) \ a
+
+    Jacobi(1,1) \ (ã .* Jacobi(1,1))
+
+    (C \ (a .* C[:,Block(1)]))
+
+    # C * 
+
+    (C \ (C[:,1] .* C[:,Block(1)]))
+    
+    X = jacobimatrix(Jacobi(1,1))
+    (I-X)/2
+    (I+X)/2
+
+    (C \ (C[:,Block(4)[1]] .* C[:,Block(1)]))
+
+    x = axes(C,1)
+    C \ (x .* C[:,Block.(1:3)])
+    C \ (x .* C[:,Block(2)])
 end

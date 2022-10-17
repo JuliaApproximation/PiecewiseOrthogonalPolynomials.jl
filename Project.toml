@@ -4,6 +4,7 @@ authors = ["Sheehan Olver <solver@mac.com>"]
 version = "0.0.1"
 
 [deps]
+BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
 BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
 BlockBandedMatrices = "ffab5731-97b5-5995-9138-79e8c1846df0"
 ClassicalOrthogonalPolynomials = "b30e2e7b-c4ee-47da-9d5f-2c5c27239acd"
@@ -20,16 +21,17 @@ QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 BlockArrays = "0.16.13"
 BlockBandedMatrices = "0.11.4"
 ClassicalOrthogonalPolynomials = "0.6"
-ContinuumArrays = "0.10"
+ContinuumArrays = "0.11"
 FillArrays = "0.13"
 InfiniteArrays = "0.12.6"
 InfiniteLinearAlgebra = "0.6"
 LazyArrays = "0.22.9"
-LazyBandedMatrices = "0.7.10, 0.8"
+LazyBandedMatrices = "0.8"
 QuasiArrays = "0.9"
 
 [extras]
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["Test", "StaticArrays"]
