@@ -1,5 +1,6 @@
 using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, BlockArrays, Test, FillArrays, LinearAlgebra, StaticArrays, ContinuumArrays
 import Base: OneTo
+import LazyBandedMatrices: MemoryLayout, AbstractBandedBlockBandedLayout
 
 @testset "transform" begin
     for r in (range(-1, 1; length=2), range(-1, 1; length=4), range(0, 1; length=4)), T in (Chebyshev(), Legendre())
@@ -97,6 +98,11 @@ end
     Δ = -(D*C)'*(D*C)
     M = C'C
     L = Δ + M
+
+    @test MemoryLayout(Δ) isa AbstractBandedBlockBandedLayout
+    @test MemoryLayout(M) isa AbstractBandedBlockBandedLayout
+    @test MemoryLayout(L) isa AbstractBandedBlockBandedLayout
+
     KR = Block.(1:10)
     @time L[KR,KR]
 end

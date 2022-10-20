@@ -3,7 +3,7 @@ using PiecewiseOrthogonalPolynomials, Plots
 ## Goal 1: Do hp solves in 1D where complexity is optimal 
 # regardless of h or p
 
-r = range(0, 1; length=6)
+r = range(0, 1; length=4)
 
 # C is standard affine FEM combined with mapped (1-x^2) * P_k^(1,1)(x)
 C = ContinuousPolynomial{1}(r)
@@ -65,3 +65,19 @@ f[0.1]
 g = range(-1,1; length=100)
 plot(g, W[g,1:5])
 
+
+
+p = 20; A = Matrix((Δ + M)[Block.(1:p+1), Block.(1:p+1)])
+
+L = cholesky(Symmetric(A[end:-1:1, end:-1:1])).U[end:-1:1,end:-1:1]
+@test L'*L ≈ A
+spy(L)
+
+using ClassicalOrthogonalPolynomials
+
+W = Weighted(Jacobi(1,1))
+n = 10_000; @time eigvals(Symmetric((W'W)[1:n,1:n]))
+
+n = 10_000; @time eigen(Symmetric((W'W)[1:n,1:n]));
+
+@time eigen(Symmetric(rand(10_000,10_000)));

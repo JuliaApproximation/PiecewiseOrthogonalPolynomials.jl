@@ -26,7 +26,7 @@ FillArrays = "0.13"
 InfiniteArrays = "0.12.6"
 InfiniteLinearAlgebra = "0.6"
 LazyArrays = "0.22.9"
-LazyBandedMatrices = "0.8"
+LazyBandedMatrices = "0.8.3"
 QuasiArrays = "0.9"
 
 [extras]
