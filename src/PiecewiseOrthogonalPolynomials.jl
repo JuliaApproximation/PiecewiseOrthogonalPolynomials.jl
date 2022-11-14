@@ -147,19 +147,23 @@ function adaptivetransform_ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiVe
     C₀ = ContinuousPolynomial{0,V}(Q)
     M = length(Q.points)-1
 
-    c = C₀\f
+    c = C₀\f # Piecewise Legendre transform
     c̃ = paddeddata(c)
     N = div(length(c̃), M, RoundUp) # degree
     P = Legendre{T}()
     W = Weighted(Jacobi{T}(1,1))
     
+    # Restrict hat function to each element, add in bubble functions and compute connection
+    # matrix to Legendre. [1 1; -1 1]/2 are the Legendre coefficients of the hat functions.
     R̃ = [[T[1 1; -1 1]/2; Zeros{T}(∞,2)] (P \ W)]
+
+    # convert from Legendre to piecewise restricted hat + Bubble
     dat = R̃[1:N,1:N] \ reshape(pad(c̃, M*N), M, N)'
     cfs = T[]
     if size(dat,1) ≥ 1
         push!(cfs, dat[1,1])
         for j = 1:M-1
-            isapprox(dat[2,j], dat[1,j+1]; atol=1000eps()) || throw(ArgumentError("Discontinuity in data."))
+            isapprox(dat[2,j], dat[1,j+1]; atol=1000*M*eps()) || throw(ArgumentError("Discontinuity in data on order of $(abs(dat[2,j]- dat[1,j+1]))."))
         end
         for j = 1:M
             push!(cfs, dat[2,j])
