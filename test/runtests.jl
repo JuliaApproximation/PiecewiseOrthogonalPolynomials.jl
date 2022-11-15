@@ -131,26 +131,14 @@ end
 end
 
 @testset "variable coefficients" begin
-    C = ContinuousPolynomial{1}(range(-1,1; length=2))
-    a = expand(C, x -> (1-x^2)*exp(x))
+    r = range(-1,1; length=4)
+    C = ContinuousPolynomial{1}(r)
+    P = ContinuousPolynomial{0}(r)
+    x = axes(P,1)
+    D = Derivative(x)
 
-    ã = Jacobi(1,1) / Jacobi(1,1) \ a
+    a = expand(P, x -> abs(x) ≤ 1/3 ? 2 : 3)    
+    L = (D*C)'* (a .* (D*C))
 
-    Jacobi(1,1) \ (ã .* Jacobi(1,1))
-
-    (C \ (a .* C[:,Block(1)]))
-
-    # C * 
-
-    (C \ (C[:,1] .* C[:,Block(1)]))
     
-    X = jacobimatrix(Jacobi(1,1))
-    (I-X)/2
-    (I+X)/2
-
-    (C \ (C[:,Block(4)[1]] .* C[:,Block(1)]))
-
-    x = axes(C,1)
-    C \ (x .* C[:,Block.(1:3)])
-    C \ (x .* C[:,Block(2)])
 end
