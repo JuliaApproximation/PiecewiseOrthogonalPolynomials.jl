@@ -125,10 +125,8 @@ function getindex(P::ContinuousPolynomial{1,T}, x::Number, Kk::BlockIndex{1}) wh
     else
         b = searchsortedlast(P.points, x)
         if b == k
-            α, β = convert(T, P.points[b]), convert(T,P.points[b+1])
-            y = T(2) / (β - α) * x - (β + α)/(β - α)
-            Weighted(Jacobi{T}(1, 1))[y, Int(K)-1]
-            # Weighted(Jacobi{T}(1, 1))[affine(P.points[b] .. P.points[b+1], ChebyshevInterval{real(T)}())[x], Int(K)-1]
+            α, β = convert(T, P.points[b]), convert(T, P.points[b+1])
+            Weighted(Jacobi{T}(1, 1))[affine(α.. β, ChebyshevInterval{real(T)}())[x], Int(K)-1]
         else
             zero(T)
         end
