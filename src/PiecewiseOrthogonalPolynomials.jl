@@ -239,7 +239,7 @@ end
     r = C.points
     N = length(r)
     v = mortar(Fill.((-convert(T, 2):-2:-∞), N - 1))
-    s = mortar(Fill(2 ./ (r[2:end]-r[1:end-1]), ∞))
+    s = mortar(Fill(convert(T,2) ./ (r[2:end]-r[1:end-1]), ∞))
     v = s .* v
     z = Zeros{T}(axes(v))
     H = BlockBroadcastArray(hcat, z, v)

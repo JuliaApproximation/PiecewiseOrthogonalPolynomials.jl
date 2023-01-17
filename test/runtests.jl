@@ -1,6 +1,7 @@
 using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, BlockArrays, Test, FillArrays, LinearAlgebra, StaticArrays, ContinuumArrays
 import Base: OneTo
 import LazyBandedMatrices: MemoryLayout, AbstractBandedBlockBandedLayout
+import ForwardDiff: derivative
 
 @testset "transform" begin
     for r in (range(-1, 1; length=2), range(-1, 1; length=4), range(0, 1; length=4)), T in (Chebyshev(), Legendre())
