@@ -74,7 +74,15 @@ end
     P = ContinuousPolynomial{0}(r)
     x = axes(C,1)
     D = Derivative(x)
-    P\D*C
+    A = P\D*C
+
+    xx = rand(5)
+    c = (x, p) -> ContinuousPolynomial{1, eltype(x)}(r)[x, p]
+
+    for p = 1:30
+        @test derivative.(x->c(x, p), xx) ≈ (P*A)[xx, p]
+    end
+
 end
 
 @testset "multiplication" begin

@@ -125,7 +125,10 @@ function getindex(P::ContinuousPolynomial{1,T}, x::Number, Kk::BlockIndex{1}) wh
     else
         b = searchsortedlast(P.points, x)
         if b == k
-            Weighted(Jacobi{T}(1, 1))[affine(P.points[b] .. P.points[b+1], ChebyshevInterval{real(T)}())[x], Int(K)-1]
+            α, β = convert(T, P.points[b]), convert(T,P.points[b+1])
+            y = T(2) / (β - α) * x - (β + α)/(β - α)
+            Weighted(Jacobi{T}(1, 1))[y, Int(K)-1]
+            # Weighted(Jacobi{T}(1, 1))[affine(P.points[b] .. P.points[b+1], ChebyshevInterval{real(T)}())[x], Int(K)-1]
         else
             zero(T)
         end
@@ -236,9 +239,11 @@ end
     r = C.points
     N = length(r)
     v = mortar(Fill.((-convert(T, 2):-2:-∞), N - 1))
+    s = mortar(Fill(2 ./ (r[2:end]-r[1:end-1]), ∞))
+    v = s .* v
     z = Zeros{T}(axes(v))
     H = BlockBroadcastArray(hcat, z, v)
-    M = BlockVcat(Hcat(Ones{T}(N) / 2, -Ones{T}(N) / 2), H)
+    M = BlockVcat(Hcat(Ones{T}(N) * (N-1), -Ones{T}(N) * (N-1)), H)
     P = ContinuousPolynomial{0}(C)
     P * _BandedBlockBandedMatrix(M', (axes(P, 2), axes(C, 2)), (0, 0), (0, 1))
 end
