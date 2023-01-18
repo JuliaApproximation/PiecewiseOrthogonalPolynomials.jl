@@ -70,7 +70,7 @@ end
 end
 
 @testset "derivative" begin
-    r = range(0,1; length=4)
+    r = [0, 0.2, 0.5, 1]
     C = ContinuousPolynomial{1}(r)
     P = ContinuousPolynomial{0}(r)
     x = axes(C,1)

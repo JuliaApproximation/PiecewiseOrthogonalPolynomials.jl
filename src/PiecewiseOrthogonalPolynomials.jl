@@ -236,12 +236,11 @@ end
     # Legendre() \ (D*Weighted(Jacobi(1,1)))
     r = C.points
     N = length(r)
-    v = mortar(Fill.((-convert(T, 2):-2:-∞), N - 1))
-    s = mortar(Fill(convert(T,2) ./ (r[2:end]-r[1:end-1]), ∞))
-    v = s .* v
+    s = one(T) ./ (r[2:end]-r[1:end-1])
+    v = mortar(Fill(T(2) * s, ∞)) .* mortar(Fill.((-convert(T, 2):-2:-∞), N - 1))
     z = Zeros{T}(axes(v))
     H = BlockBroadcastArray(hcat, z, v)
-    M = BlockVcat(Hcat(Ones{T}(N) * (N-1), -Ones{T}(N) * (N-1)), H)
+    M = BlockVcat(Hcat(Ones{T}(N) .* [zero(T); s] , -Ones{T}(N) .* [s; zero(T)] ), H)
     P = ContinuousPolynomial{0}(C)
     P * _BandedBlockBandedMatrix(M', (axes(P, 2), axes(C, 2)), (0, 0), (0, 1))
 end
