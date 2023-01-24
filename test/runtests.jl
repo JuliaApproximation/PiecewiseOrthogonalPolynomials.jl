@@ -70,18 +70,19 @@ end
 end
 
 @testset "derivative" begin
-    r = range(0,1; length=4)
-    C = ContinuousPolynomial{1}(r)
-    P = ContinuousPolynomial{0}(r)
-    x = axes(C,1)
-    D = Derivative(x)
-    A = P\D*C
+    for r in (range(0,1; length=4), [0, 0.2, 0.5, 1])
+        C = ContinuousPolynomial{1}(r)
+        P = ContinuousPolynomial{0}(r)
+        x = axes(C,1)
+        D = Derivative(x)
+        A = P\D*C
 
-    xx = rand(5)
-    c = (x, p) -> ContinuousPolynomial{1, eltype(x)}(r)[x, p]
+        xx = rand(5)
+        c = (x, p) -> ContinuousPolynomial{1, eltype(x)}(r)[x, p]
 
-    for p = 1:30
-        @test derivative.(x->c(x, p), xx) ≈ (P*A)[xx, p]
+        for p = 1:30
+            @test derivative.(x->c(x, p), xx) ≈ (P*A)[xx, p]
+        end
     end
 
 end
