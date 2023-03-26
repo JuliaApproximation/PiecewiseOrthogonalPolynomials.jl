@@ -6,7 +6,7 @@ import BlockBandedMatrices: _BandedBlockBandedMatrix
 import ClassicalOrthogonalPolynomials: grid, massmatrix, ldiv, pad, adaptivetransform_ldiv
 import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBasisLayout, MemoryLayout, layout_broadcasted, ExpansionLayout, basis, plan_grid_transform
 import LazyArrays: paddeddata
-import LazyBandedMatrices: BlockBroadcastMatrix
+import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec
 import Base: axes, getindex, ==, \, OneTo
 
 export PiecewisePolynomial, ContinuousPolynomial, Derivative, Block
@@ -62,7 +62,7 @@ end
 \(P::ApplyFactorization, f) = P.f(P.F \ f)
 
 
-_perm_blockvec(X::AbstractMatrix) = blockvec(permutedims(X))
+_perm_blockvec(X::AbstractMatrix) = BlockVec(transpose(X))
 function _perm_blockvec(X::AbstractArray{T,3}) where T
     X1 = _perm_blockvec(X[:,:,1])
     ret = PseudoBlockMatrix{T}(undef, (axes(X1,1), axes(X,3)))

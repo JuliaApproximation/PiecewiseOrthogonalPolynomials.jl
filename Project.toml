@@ -24,9 +24,9 @@ ClassicalOrthogonalPolynomials = "0.7"
 ContinuumArrays = "0.12"
 FillArrays = "0.13"
 InfiniteArrays = "0.12.6"
-InfiniteLinearAlgebra = "0.6"
+InfiniteLinearAlgebra = "0.6.16"
 LazyArrays = "0.22.9"
-LazyBandedMatrices = "0.8.3"
+LazyBandedMatrices = "0.8.7"
 QuasiArrays = "0.9"
 
 [extras]
