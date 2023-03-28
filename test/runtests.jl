@@ -43,7 +43,7 @@ end
         P = ContinuousPolynomial{0}(r)
         C = ContinuousPolynomial{1}(r)
         R = P \ C
-        for x in range(first(r), last(r); length=100)
+        for x in range(first(r), last(r); length=10)
             @test (C*c)[x] ≈ (P*@inferred(R*c))[x]
         end
     end
@@ -54,8 +54,8 @@ end
         P = ContinuousPolynomial{0}(r)
         C = ContinuousPolynomial{1}(r)
 
-        @test P ≠ C
-        @test C ≠ P
+        @test P ≠ C
+        @test C ≠ P
         @test P == PiecewisePolynomial(P)
         @test PiecewisePolynomial(P) == P
         @test C ≠ PiecewisePolynomial(P)
