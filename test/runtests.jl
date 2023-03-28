@@ -44,7 +44,7 @@ end
         C = ContinuousPolynomial{1}(r)
         R = P \ C
         for x in range(first(r), last(r); length=100)
-            @test (C*c)[x] ≈ (P*(R*c))[x]
+            @test (C*c)[x] ≈ (P*@inferred(R*c))[x]
         end
     end
 end
