@@ -1,7 +1,7 @@
 name = "PiecewiseOrthogonalPolynomials"
 uuid = "4461d12d-4663-4550-8580-cb764c85e20f"
 authors = ["Sheehan Olver <solver@mac.com>"]
-version = "0.0.1"
+version = "0.0.2"
 
 [deps]
 BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
@@ -17,15 +17,15 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 
 [compat]
-BlockArrays = "0.16.13"
-BlockBandedMatrices = "0.11.4"
+BlockArrays = "0.16.25"
+BlockBandedMatrices = "0.11.10"
 ClassicalOrthogonalPolynomials = "0.7"
 ContinuumArrays = "0.12"
-FillArrays = "0.13"
+FillArrays = "0.13, 1.0"
 InfiniteArrays = "0.12.6"
-InfiniteLinearAlgebra = "0.6"
+InfiniteLinearAlgebra = "0.6.16"
 LazyArrays = "0.22.9"
-LazyBandedMatrices = "0.8.3"
+LazyBandedMatrices = "0.8.7"
 QuasiArrays = "0.9"
 julia = "1.7"
 

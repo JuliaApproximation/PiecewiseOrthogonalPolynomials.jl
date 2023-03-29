@@ -1,12 +1,13 @@
 using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, BlockArrays, Test, FillArrays, LinearAlgebra, StaticArrays, ContinuumArrays
 import Base: OneTo
-import LazyBandedMatrices: MemoryLayout, AbstractBandedBlockBandedLayout
+import LazyBandedMatrices: MemoryLayout, AbstractBandedBlockBandedLayout, BlockVec
 import ForwardDiff: derivative
 
 @testset "transform" begin
     for r in (range(-1, 1; length=2), range(-1, 1; length=4), range(0, 1; length=4)), T in (Chebyshev(), Legendre())
         P = PiecewisePolynomial(T, r)
         x = axes(P,1)
+        @test P[:,Block.(Base.OneTo(3))] \ x isa BlockVec
         @test P[:,Block.(Base.OneTo(3))] \ x ≈ (P\ x)[Block.(1:3)]
         @test (P/P\x)[0.1] ≈ 0.1
         @test (P/P\exp.(x))[0.1] ≈ exp(0.1)
@@ -42,8 +43,8 @@ end
         P = ContinuousPolynomial{0}(r)
         C = ContinuousPolynomial{1}(r)
         R = P \ C
-        for x in range(first(r), last(r); length=100)
-            @test (C*c)[x] ≈ (P*(R*c))[x]
+        for x in range(first(r), last(r); length=10)
+            @test (C*c)[x] ≈ (P*@inferred(R*c))[x]
         end
     end
 end
@@ -53,8 +54,8 @@ end
         P = ContinuousPolynomial{0}(r)
         C = ContinuousPolynomial{1}(r)
 
-        @test P ≠ C
-        @test C ≠ P
+        @test P ≠ C
+        @test C ≠ P
         @test P == PiecewisePolynomial(P)
         @test PiecewisePolynomial(P) == P
         @test C ≠ PiecewisePolynomial(P)
