@@ -29,6 +29,13 @@ PiecewisePolynomial(basis::AbstractQuasiMatrix{T}, points::AbstractVector) where
 axes(B::PiecewisePolynomial) = (Inclusion(first(B.points) .. last(B.points)), blockedrange(Fill(length(B.points) - 1, ∞)))
 
 ==(P::PiecewisePolynomial, Q::PiecewisePolynomial) = P.basis == Q.basis && P.points == Q.points
+function ==(P::PiecewisePolynomial, Q::AbstractQuasiMatrix)
+    P.basis == Q || return false
+    x = axes(Q,1)
+    P.points == [first(x), last(x)]
+end
+
+==(Q::AbstractQuasiMatrix, P::PiecewisePolynomial) = P == Q
 
 function repeatgrid(ax, g, pts)
     ret = Matrix{eltype(g)}(undef, length(g), length(pts) - 1)
@@ -98,8 +105,9 @@ axes(B::ContinuousPolynomial{0}) = axes(PiecewisePolynomial(B))
 axes(B::ContinuousPolynomial{1}) =
     (Inclusion(first(B.points) .. last(B.points)), blockedrange(Vcat(length(B.points), Fill(length(B.points) - 1, ∞))))
 
-==(P::PiecewisePolynomial, C::ContinuousPolynomial{0}) = P == PiecewisePolynomial(C)
-==(C::ContinuousPolynomial{0}, P::PiecewisePolynomial) = PiecewisePolynomial(C) == P
+==(A::ContinuousPolynomial{0}, B::ContinuousPolynomial{0}) = A.points == B.points
+==(P::AbstractQuasiMatrix, C::ContinuousPolynomial{0}) = P == PiecewisePolynomial(C)
+==(C::ContinuousPolynomial{0}, P::AbstractQuasiMatrix) = PiecewisePolynomial(C) == P
 ==(::PiecewisePolynomial, ::ContinuousPolynomial{1}) = false
 ==(::ContinuousPolynomial{1}, ::PiecewisePolynomial) = false
 ==(A::ContinuousPolynomial{o}, B::ContinuousPolynomial{o}) where o = A.points == B.points
