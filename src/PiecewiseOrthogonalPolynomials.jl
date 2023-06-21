@@ -268,5 +268,7 @@ function layout_broadcasted(::Tuple{ExpansionLayout{PiecewisePolynomialLayout{0}
     (a .* P) * (P \ C)
 end
 
+include("arrowhead.jl")
+
 
 end # module
