@@ -1,8 +1,8 @@
 module PiecewiseOrthogonalPolynomials
-using ClassicalOrthogonalPolynomials, LinearAlgebra, BlockArrays, BlockBandedMatrices, ContinuumArrays, QuasiArrays, LazyArrays, LazyBandedMatrices, FillArrays
+using ClassicalOrthogonalPolynomials, LinearAlgebra, BlockArrays, BlockBandedMatrices, BandedMatrices, ContinuumArrays, QuasiArrays, LazyArrays, LazyBandedMatrices, FillArrays
 
 import BlockArrays: BlockSlice, block, blockindex, blockvec
-import BlockBandedMatrices: _BandedBlockBandedMatrix
+import BlockBandedMatrices: _BandedBlockBandedMatrix, AbstractBandedBlockBandedMatrix
 import ClassicalOrthogonalPolynomials: grid, massmatrix, ldiv, pad, adaptivetransform_ldiv
 import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBasisLayout, MemoryLayout, layout_broadcasted, ExpansionLayout, basis, plan_grid_transform
 import LazyArrays: paddeddata
