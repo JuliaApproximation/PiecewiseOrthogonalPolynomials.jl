@@ -24,3 +24,8 @@ L = LeftArrowheadMatrix(
 
 KR = Block.(Base.OneTo(5))
 @test (P\C)[KR,KR] == L[KR,KR]
+
+C'C
+
+
+diff(C; dims=1)'diff(C; dims=1)

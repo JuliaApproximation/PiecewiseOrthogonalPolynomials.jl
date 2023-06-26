@@ -12,7 +12,21 @@ struct LeftArrowheadMatrix{T} <: AbstractBandedBlockBandedMatrix{T}
     tail::Vector{BandedMatrix{T}}
 end
 
-subblockbandwidths(::LeftArrowheadMatrix) = (0,1)
+"""
+SymArrowheadMatrix
+
+    T   B   B  
+    B'   D   D  D
+    …   …   …   …   …
+    B'   D   D  
+"""
+struct SymArrowheadMatrix{T} <: AbstractBandedBlockBandedMatrix{T}
+    topleft::SymTridiagonal{T}
+    firstcol::Vector{BandedMatrix{T}}
+    tail::Vector{BandedMatrix{T}}
+end
+
+subblockbandwidths(A::LeftArrowheadMatrix) = bandwidths(A.firstcol[1])
 function blockbandwidths(A::LeftArrowheadMatrix)
     l,u = bandwidths(A.tail[1])
     max(l,length(A.firstcol))-1,u+1
@@ -41,10 +55,11 @@ end
 function LeftArrowheadMatrix(firstcol, tail)
     n = size(firstcol[1],2)
     m = length(tail)
+    λ,μ = bandwidths(firstcol[1])
     l,u = bandwidths(tail[1])
     for op in firstcol
         @assert size(op) == (m,n)
-        @assert bandwidths(op) == (0,1)
+        @assert bandwidths(op) == (λ,μ)
     end
     for op in tail
         @assert bandwidths(op) == (l,u)
