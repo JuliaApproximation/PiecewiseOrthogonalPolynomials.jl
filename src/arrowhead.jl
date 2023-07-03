@@ -7,21 +7,7 @@ LeftArrowheadMatrix
     …   …   …   …   …
     B   D   D  
 """
-struct LeftArrowheadMatrix{T} <: AbstractBandedBlockBandedMatrix{T}
-    firstcol::Vector{BandedMatrix{T}}
-    tail::Vector{BandedMatrix{T}}
-end
-
-"""
-SymArrowheadMatrix
-
-    T   B   B  
-    B'   D   D  D
-    …   …   …   …   …
-    B'   D   D  
-"""
-struct SymArrowheadMatrix{T} <: AbstractBandedBlockBandedMatrix{T}
-    topleft::SymTridiagonal{T}
+struct LeftArrowheadMatrix{T} <: AbstractBandedBlockBandedMatrix{T}-
     firstcol::Vector{BandedMatrix{T}}
     tail::Vector{BandedMatrix{T}}
 end
@@ -59,7 +45,9 @@ function LeftArrowheadMatrix(firstcol, tail)
     l,u = bandwidths(tail[1])
     for op in firstcol
         @assert size(op) == (m,n)
-        @assert bandwidths(op) == (λ,μ)
+        λₖ,μₖ = bandwidths(op)
+        @assert λₖ ≤ λ
+        @assert μₖ ≤ μ
     end
     for op in tail
         @assert bandwidths(op) == (l,u)
