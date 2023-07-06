@@ -7,7 +7,7 @@ LeftArrowheadMatrix
     …   …   …   …   …
     B   D   D  
 """
-struct LeftArrowheadMatrix{T} <: AbstractBandedBlockBandedMatrix{T}-
+struct LeftArrowheadMatrix{T} <: AbstractBandedBlockBandedMatrix{T}
     firstcol::Vector{BandedMatrix{T}}
     tail::Vector{BandedMatrix{T}}
 end
@@ -19,10 +19,10 @@ function blockbandwidths(A::LeftArrowheadMatrix)
 end
 
 function axes(L::LeftArrowheadMatrix)
-    n = size(L.firstcol[1],2)
+    ξ,n = size(L.firstcol[1])
     m = length(L.tail)
     μ,ν = size(L.tail[1])
-    blockedrange(Fill(m,μ)), blockedrange(Vcat(n, Fill(m,ν)))
+    blockedrange(Vcat(ξ, Fill(m,μ-1))), blockedrange(Vcat(n, Fill(m,ν)))
 end
 
 function getindex(L::LeftArrowheadMatrix{T}, Kk::BlockIndex{1}, Jj::BlockIndex{1}) where T
@@ -43,7 +43,7 @@ function LeftArrowheadMatrix(firstcol, tail)
     m = length(tail)
     λ,μ = bandwidths(firstcol[1])
     l,u = bandwidths(tail[1])
-    for op in firstcol
+    for op in firstcol[2:end]
         @assert size(op) == (m,n)
         λₖ,μₖ = bandwidths(op)
         @assert λₖ ≤ λ
@@ -73,9 +73,10 @@ function layout_replace_in_print_matrix(::LeftArrowheadLayout, A, i, j, s)
     I,J = block.(bi)
     i,j = blockindex.(bi)
     l,u = blockbandwidths(A)
-    if -l ≤ Int(J-I) ≤ u
-        J == Block(1) && 0 ≤ j-i ≤ 1 && return s
-        i == j && return s
+    if J == Block(1) && Int(I) ≤ length(A.firstcol)
+        return Base.replace_in_print_matrix(A.firstcol[Int(I)], i, j, s)
+    elseif -l ≤ Int(J-I) ≤ u &&  i == j
+        return s
     end
     Base.replace_with_centered_mark(s)
 end
