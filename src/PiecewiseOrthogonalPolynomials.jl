@@ -8,7 +8,7 @@ import ClassicalOrthogonalPolynomials: grid, massmatrix, ldiv, pad, adaptivetran
 import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBasisLayout, MemoryLayout, layout_broadcasted, ExpansionLayout, basis, plan_grid_transform
 import LazyArrays: paddeddata
 import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec
-import Base: axes, getindex, ==, \, OneTo
+import Base: axes, getindex, ==, \, OneTo, oneto, replace_in_print_matrix
 
 export PiecewisePolynomial, ContinuousPolynomial, Derivative, Block
 
