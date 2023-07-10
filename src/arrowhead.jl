@@ -7,12 +7,17 @@ ArrowheadMatrix
     …   …   …   …   …
     C   D   D  
 """
-struct ArrowheadMatrix{T} <: AbstractBandedBlockBandedMatrix{T}
-    A::BandedMatrix{T}
-    B::Vector{BandedMatrix{T}} # first row blocks
-    C::Vector{BandedMatrix{T}} # first col blocks
-    D::Vector{BandedMatrix{T}} # these are interlaces
+struct ArrowheadMatrix{T, AA<:AbstractMatrix{T},
+                      BB<:AbstractVector{<:AbstractMatrix{T}},
+                      CC<:AbstractVector{<:AbstractMatrix{T}},
+                      DD<:AbstractVector{<:AbstractMatrix{T}}} <: AbstractBandedBlockBandedMatrix{T}
+    A::AA
+    B::BB # first row blocks
+    C::CC # first col blocks
+    D::DD # these are interlaces
 end
+
+ArrowheadMatrix{T}(A, B, C, D) where T = ArrowheadMatrix{T, typeof(A), typeof(B), typeof(C), typeof(D)}(A, B, C, D)
 
 subblockbandwidths(A::ArrowheadMatrix) = bandwidths(A.A)
 function blockbandwidths(A::ArrowheadMatrix)
@@ -26,6 +31,8 @@ function axes(L::ArrowheadMatrix)
     μ,ν = size(L.D[1])
     blockedrange(Vcat(ξ, Fill(m,μ))), blockedrange(Vcat(n, Fill(m,ν)))
 end
+
+copy(A::ArrowheadMatrix) = ArrowheadMatrix(copy(A.A), map(copy, A.B), map(copy, A.C), map(copy, A.D))
 
 function getindex(L::ArrowheadMatrix{T}, Kk::BlockIndex{1}, Jj::BlockIndex{1}) where T
     K,k = block(Kk),blockindex(Kk)

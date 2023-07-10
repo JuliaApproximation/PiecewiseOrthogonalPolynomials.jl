@@ -1,4 +1,4 @@
-using PiecewiseOrthogonalPolynomials, FillArrays, BandedMatrices
+using PiecewiseOrthogonalPolynomials, FillArrays, BandedMatrices, MatrixFactorizations, Test
 using PiecewiseOrthogonalPolynomials: ArrowheadMatrix
 using InfiniteArrays, BlockArrays
 using BandedMatrices: _BandedMatrix
@@ -32,8 +32,23 @@ C'C
 n = 3; p = 5;
 A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)), 
                         [BandedMatrix((0 => randn(n-1), -1 => randn(n-1)), (n,n-1)) for _=1:2],
-                        BandedMatrix{Float64}[],
+                        BandedMatrix{Float64, Matrix{Float64}, Base.OneTo{Int64}}[],
                      fill(BandedMatrix((0 => randn(p) .+ 10, 2 => randn(p-2)), (p, p)), n-1))
 
-cholesky(Symmetric(Matrix(A)))
+PseudoBlockArray(reversecholesky(Symmetric(Matrix(A))).factors, axes(A))
 
+let A = copy(A)
+    map(B -> reversecholesky!(Symmetric(B)), A.D)
+    
+    ξ,n = size(A.A)
+    m = length(A.D)
+    for b = 1:length(A.B)
+        for j = 1:m
+            AkkInv = inv(A.D[j][b,b])
+            for k = j:j+1
+                A.B[b][k,j] *= AkkInv'
+            end
+        end
+    end
+    A
+end
