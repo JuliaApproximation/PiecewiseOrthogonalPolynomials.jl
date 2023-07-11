@@ -118,11 +118,11 @@ function MatrixFactorizations._reverse_chol!(A::ArrowheadMatrix, ::Type{UpperTri
     
     ξ,n = size(A.A)
     m = length(A.D)
+    @assert ξ == n == m+1
     # for each block interacting with B, and each entry of each
     # block
     for b = length(A.B):-1:1, k = m:-1:1
-        AkkInv = inv(copy(A.D[k][b,b]'))
-        for b̃ = b+1:length(A.B)
+        for b̃ = b+1:length(A.B) # j loop
             Akj = A.D[k][b,b̃]'
             
             if !iszero(Akj) # often we have zeros so this avoids unnecessary computation
@@ -131,12 +131,34 @@ function MatrixFactorizations._reverse_chol!(A::ArrowheadMatrix, ::Type{UpperTri
                 end
             end
         end
- 
+
+        AkkInv = inv(copy(A.D[k][b,b]'))
         for i = k:k+1
             A.B[b][i,k] *= AkkInv'
         end
     end
 
+    #(1,1) block update now
+    for k = n:-1:1
+        for b̃ = 1:length(A.B) # j loop
+            if k ≠ 1
+                j = k-1
+                Akj = A.B[b̃][k,j]
+                for i = j:j+1
+                    A.A[i,k] -= A.B[b̃][i,j]*Akj
+                end
+            end
+
+            if k ≠ n
+                j = k
+                Akj = A.B[b̃][k,j]
+                i = j
+                A.A[i,k] -= A.B[b̃][i,j]*Akj
+            end
+        end
+    end
+
+    reversecholesky!(Symmetric(A.A))
 
     # for b = 1:length(A.B)
     #     for j = 1:m
