@@ -35,9 +35,7 @@ A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => ran
                         BandedMatrix{Float64, Matrix{Float64}, Base.OneTo{Int64}}[],
                      fill(BandedMatrix((0 => randn(p) .+ 10, 2 => randn(p-2)), (p, p)), n-1))
 
-PseudoBlockArray(reversecholesky(Symmetric(Matrix(A))).factors, axes(A))
-
-reversecholesky!(Symmetric(copy(A)))
+                     @test reversecholesky(Symmetric(Matrix(A))).U ≈ reversecholesky!(Symmetric(copy(A))).U
 
 
 A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)), 

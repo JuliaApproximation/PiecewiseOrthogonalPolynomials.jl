@@ -112,6 +112,11 @@ function layout_replace_in_print_matrix(::ArrowheadLayout, A, k, j, s)
 end
 
 function MatrixFactorizations._reverse_chol!(A::ArrowheadMatrix, ::Type{UpperTriangular})
+    @assert bandwidths(A.A) == (1,1)
+    for B in A.B
+        @assert bandwidths(B) == (1,0)
+    end
+
     for B in A.D
         reversecholesky!(Symmetric(B))
     end
