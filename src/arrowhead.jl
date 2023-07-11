@@ -110,3 +110,43 @@ function layout_replace_in_print_matrix(::ArrowheadLayout, A, k, j, s)
     k ≠ j && return Base.replace_with_centered_mark(s)
     return replace_in_print_matrix(A.D[k], Int(K)-1, Int(J)-1, s)
 end
+
+function MatrixFactorizations._reverse_chol!(A::ArrowheadMatrix, ::Type{UpperTriangular})
+    for B in A.D
+        reversecholesky!(Symmetric(B))
+    end
+    
+    ξ,n = size(A.A)
+    m = length(A.D)
+    # for each block interacting with B, and each entry of each
+    # block
+    for b = length(A.B):-1:1, k = m:-1:1
+        AkkInv = inv(copy(A.D[k][b,b]'))
+        for b̃ = b+1:length(A.B)
+            Akj = A.D[k][b,b̃]'
+            
+            if !iszero(Akj) # often we have zeros so this avoids unnecessary computation
+                @simd for i = k:k+1
+                    A.B[b][i,k] -= A.B[b̃][i,k]*Akj
+                end
+            end
+        end
+ 
+        for i = k:k+1
+            A.B[b][i,k] *= AkkInv'
+        end
+    end
+
+
+    # for b = 1:length(A.B)
+    #     for j = 1:m
+    #         AkkInv = inv(A.D[j][b,b])
+    #         for k = j:j+1
+    #             A.B[b][k,j] *= AkkInv'
+    #         end
+    #     end
+    # end
+
+
+    return UpperTriangular(A), convert(BlasInt, 0)
+end

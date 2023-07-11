@@ -29,6 +29,7 @@ InfiniteArrays = "0.12.6"
 InfiniteLinearAlgebra = "0.6.16"
 LazyArrays = "1.0"
 LazyBandedMatrices = "0.8.7"
+MatrixFactorizations = "2.0"
 QuasiArrays = "0.10"
 julia = "1.9"
 

@@ -1,5 +1,5 @@
 module PiecewiseOrthogonalPolynomials
-using ClassicalOrthogonalPolynomials, LinearAlgebra, BlockArrays, BlockBandedMatrices, BandedMatrices, ContinuumArrays, QuasiArrays, LazyArrays, LazyBandedMatrices, FillArrays
+using ClassicalOrthogonalPolynomials, LinearAlgebra, BlockArrays, BlockBandedMatrices, BandedMatrices, ContinuumArrays, QuasiArrays, LazyArrays, LazyBandedMatrices, FillArrays, MatrixFactorizations
 
 import ArrayLayouts: sublayout, sub_materialize
 import BlockArrays: BlockSlice, block, blockindex, blockvec
@@ -9,6 +9,7 @@ import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBa
 import LazyArrays: paddeddata
 import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec
 import Base: axes, getindex, ==, \, OneTo, oneto, replace_in_print_matrix, copy
+import LinearAlgebra: BlasInt
 
 export PiecewisePolynomial, ContinuousPolynomial, Derivative, Block
 
