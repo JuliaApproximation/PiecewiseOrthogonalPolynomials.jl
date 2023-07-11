@@ -7,10 +7,7 @@ ArrowheadMatrix
     …   …   …   …   …
     C   D   D  
 """
-struct ArrowheadMatrix{T, AA<:AbstractMatrix{T},
-                      BB<:AbstractVector{<:AbstractMatrix{T}},
-                      CC<:AbstractVector{<:AbstractMatrix{T}},
-                      DD<:AbstractVector{<:AbstractMatrix{T}}} <: AbstractBandedBlockBandedMatrix{T}
+struct ArrowheadMatrix{T, AA<:AbstractMatrix{T}, BB, CC, DD} <: AbstractBandedBlockBandedMatrix{T}
     A::AA
     B::BB # first row blocks
     C::CC # first col blocks
@@ -36,7 +33,7 @@ end
 
 copy(A::ArrowheadMatrix) = ArrowheadMatrix(copy(A.A), map(copy, A.B), map(copy, A.C), map(copy, A.D))
 
-function getindex(L::ArrowheadMatrix{T}, Kk::BlockIndex{1}, Jj::BlockIndex{1}) where T
+function getindex(L::ArrowheadMatrix{T}, Kk::BlockIndex{1}, Jj::BlockIndex{1})::T where T
     K,k = block(Kk),blockindex(Kk)
     J,j = block(Jj),blockindex(Jj)
     J == K == Block(1) && return L.A[k,j]
@@ -79,20 +76,25 @@ function ArrowheadMatrix(A, B, C, D)
     for op in D
         @assert bandwidths(op) == (l,u)
     end
-    T = promote_type(eltype(A), eltype(eltype(B)), eltype(eltype(C)), eltype(eltype(D)))
+    T = promote_type(eltype(A), mapreduce(eltype, promote_type, B),
+                     mapreduce(eltype, promote_type, C), mapreduce(eltype, promote_type, D))
     ArrowheadMatrix{T}(A, B, C, D)
 end
 
 
 struct ArrowheadLayout <: AbstractBandedBlockBandedLayout end
-MemoryLayout(::Type{<:ArrowheadMatrix}) = ArrowheadLayout()
+struct LazyArrowheadLayout <: AbstractLazyBandedBlockBandedLayout end
+ArrowheadLayouts = Union{ArrowheadLayout,LazyArrowheadLayout}
+arrowheadlayout(_) = ArrowheadLayout()
+arrowheadlayout(::BandedLazyLayouts) = LazyArrowheadLayout()
+MemoryLayout(::Type{<:ArrowheadMatrix{<:Any,<:Any,<:Any,<:Any,<:AbstractVector{D}}}) where D = arrowheadlayout(MemoryLayout(D))
 
-sublayout(::ArrowheadLayout, ::Type{<:NTuple{2,BlockSlice{<:BlockRange{1, Tuple{OneTo{Int}}}}}}) = ArrowheadLayout()
+sublayout(::ArrowheadLayouts, ::Type{<:NTuple{2,BlockSlice{<:BlockRange{1, Tuple{OneTo{Int}}}}}}) = ArrowheadLayout()
 function sub_materialize(::ArrowheadLayout, V::AbstractMatrix)
     KR,JR = parentindices(V)
     P = parent(V)
     M,N =  KR.block[end],JR.block[end]
-    ArrowheadMatrix(P.A, P.B[oneto(min(length(P.B),Int(N)-1))], P.C[oneto(min(length(P.B),Int(M)-1))],
+    ArrowheadMatrix(P.A, P.B, P.C,
                     getindex.(P.D, Ref(oneto(Int(M)-1)), Ref(oneto(Int(N)-1))))
 end
 

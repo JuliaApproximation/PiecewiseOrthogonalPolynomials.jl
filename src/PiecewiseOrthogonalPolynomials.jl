@@ -2,12 +2,13 @@ module PiecewiseOrthogonalPolynomials
 using ClassicalOrthogonalPolynomials, LinearAlgebra, BlockArrays, BlockBandedMatrices, BandedMatrices, ContinuumArrays, QuasiArrays, LazyArrays, LazyBandedMatrices, FillArrays, MatrixFactorizations
 
 import ArrayLayouts: sublayout, sub_materialize
+import BandedMatrices: _BandedMatrix
 import BlockArrays: BlockSlice, block, blockindex, blockvec
 import BlockBandedMatrices: _BandedBlockBandedMatrix, AbstractBandedBlockBandedMatrix, subblockbandwidths, blockbandwidths, AbstractBandedBlockBandedLayout, layout_replace_in_print_matrix
 import ClassicalOrthogonalPolynomials: grid, massmatrix, ldiv, pad, adaptivetransform_ldiv
 import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBasisLayout, MemoryLayout, layout_broadcasted, ExpansionLayout, basis, plan_grid_transform
 import LazyArrays: paddeddata
-import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec
+import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec, AbstractLazyBandedBlockBandedLayout, BandedLazyLayouts
 import Base: axes, getindex, ==, \, OneTo, oneto, replace_in_print_matrix, copy
 import LinearAlgebra: BlasInt
 
@@ -205,6 +206,19 @@ function \(P::ContinuousPolynomial{0}, C::ContinuousPolynomial{1})
     dat = BlockHcat(M1, M2, M3)'
     _BandedBlockBandedMatrix(dat, axes(P, 2), (1, 1), (0, 1))
 end
+
+function \(P::ContinuousPolynomial{0, <:Any, <:AbstractRange}, C::ContinuousPolynomial{1, <:Any, <:AbstractRange})
+    T = promote_type(eltype(P), eltype(C))
+    @assert P.points == C.points
+    v = (convert(T, 2):2:∞) ./ (3:2:∞)
+    N = length(P.points)
+    L = ArrowheadMatrix(_BandedMatrix(Ones{T}(2, N)/2, oneto(N-1), 0, 1),
+        (_BandedMatrix(Fill(v[1], 1, N-1), oneto(N-1), 0, 0),),
+        (_BandedMatrix(Vcat(Ones{T}(1, N)/2, -Ones{T}(1, N)/2), oneto(N-1), 0, 1),),
+        Fill(_BandedMatrix(Hcat(v, Zeros{T}(∞), -v)', axes(v,1), 1, 1), N-1))
+end
+
+
 
 ######
 # Gram matrix
