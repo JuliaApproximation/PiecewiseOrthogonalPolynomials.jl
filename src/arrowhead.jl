@@ -15,6 +15,8 @@ struct ArrowheadMatrix{T, AA<:AbstractMatrix{T},
     B::BB # first row blocks
     C::CC # first col blocks
     D::DD # these are interlaces
+
+    ArrowheadMatrix{T, AA, BB, CC, DD}(A, B, C, D) where {T,AA,BB,CC,DD} = new{T,AA,BB,CC,DD}(A, B, C, D)
 end
 
 ArrowheadMatrix{T}(A, B, C, D) where T = ArrowheadMatrix{T, typeof(A), typeof(B), typeof(C), typeof(D)}(A, B, C, D)
