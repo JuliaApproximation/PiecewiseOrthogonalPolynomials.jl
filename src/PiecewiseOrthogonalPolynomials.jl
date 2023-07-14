@@ -4,11 +4,11 @@ using ClassicalOrthogonalPolynomials, LinearAlgebra, BlockArrays, BlockBandedMat
 import ArrayLayouts: sublayout, sub_materialize
 import BlockArrays: BlockSlice, block, blockindex, blockvec
 import BlockBandedMatrices: _BandedBlockBandedMatrix, AbstractBandedBlockBandedMatrix, subblockbandwidths, blockbandwidths, AbstractBandedBlockBandedLayout, layout_replace_in_print_matrix
-import ClassicalOrthogonalPolynomials: grid, massmatrix, ldiv, pad, adaptivetransform_ldiv
+import ClassicalOrthogonalPolynomials: grid, ldiv, pad, adaptivetransform_ldiv, grammatrix
 import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBasisLayout, MemoryLayout, layout_broadcasted, ExpansionLayout, basis, plan_grid_transform
 import LazyArrays: paddeddata
 import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec
-import Base: axes, getindex, ==, \, OneTo, oneto, replace_in_print_matrix, copy
+import Base: axes, getindex, ==, \, OneTo, oneto, replace_in_print_matrix, copy, diff
 import LinearAlgebra: BlasInt
 
 export PiecewisePolynomial, ContinuousPolynomial, Derivative, Block
@@ -216,7 +216,7 @@ end
     r = A.points
     @assert r == B.points
     N = length(r)
-    M = massmatrix(Legendre{T}())
+    M = grammatrix(Legendre{T}())
     Diagonal(mortar(Fill.((step(r) / 2) .* M.diag, N - 1)))
 end
 
@@ -232,9 +232,7 @@ end
 # Derivative
 #####
 
-@simplify function *(D::Derivative, C::ContinuousPolynomial{1})
-    T = promote_type(eltype(D), eltype(C))
-
+function diff(C::ContinuousPolynomial{1,T}; dims=1) where T
     # Legendre() \ (D*Weighted(Jacobi(1,1)))
     r = C.points
     N = length(r)
@@ -244,7 +242,7 @@ end
     H = BlockBroadcastArray(hcat, z, v)
     M = BlockVcat(Hcat(Ones{T}(N) .* [zero(T); s] , -Ones{T}(N) .* [s; zero(T)] ), H)
     P = ContinuousPolynomial{0}(C)
-    P * _BandedBlockBandedMatrix(M', (axes(P, 2), axes(C, 2)), (0, 0), (0, 1))
+    ApplyQuasiMatrix(*, P, _BandedBlockBandedMatrix(M', (axes(P, 2), axes(C, 2)), (0, 0), (0, 1)))
 end
 
 

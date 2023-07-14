@@ -49,3 +49,24 @@ import Base: oneto
         @test reversecholesky(Symmetric(Matrix(A))).U ≈ reversecholesky!(Symmetric(copy(A))).U
     end
 end
+
+using ClassicalOrthogonalPolynomials
+using ClassicalOrthogonalPolynomials: grammatrix
+using BlockBandedMatrices: _BandedBlockBandedMatrix
+using LazyBandedMatrices
+
+function weaklaplacian(r)
+    P = ContinuousPolynomial{0}(r)
+    N = length(P.points)
+    s = step(r)
+    t1 = Vcat((N-1)/2, Fill((N-1), N-2), (N-1)/2)
+    t2 = Fill(-(N-1)/2, N-1)
+    ArrowheadMatrix(LazyBandedMatrices.SymTridiagonal(t1, t2), BandedMatrix{Float64, Matrix{Float64}, Base.OneTo{Int}}[], BandedMatrix{Float64, Matrix{Float64}, Base.OneTo{Int}}[],
+        Fill(Diagonal(16 .* (1:∞) .^ 2 ./ (s .* ((2:2:∞) .+ 1))), N-1))
+end
+
+r = range(-1,1; length=4)
+mats = weaklaplacian(r)
+C = ContinuousPolynomial{1}(r)
+KR = Block.(1:5)
+@test (diff(C)'diff(C))[KR,KR] ≈ mats[KR,KR]
