@@ -39,30 +39,20 @@ import Base: oneto
 
         @test reversecholesky(Symmetric(Matrix(A))).U ≈ reversecholesky!(Symmetric(copy(A))).U
     end
+
+    @testset "Helmholtz solve" begin
+        r = range(-1,1; length=4)
+        C = ContinuousPolynomial{1}(r)
+        Δ = weaklaplacian(C)
+        M = grammatrix(C)
+
+        KR = Block.(1:5)
+        @test (diff(C)'diff(C))[KR,KR] ≈ mats[KR,KR]
+
+        KR = Block.(oneto(100))
+        @time F = reversecholesky(Symmetric(parent(Δ+M)[KR,KR]));
+        c = F \ (M[KR,KR] * transform(C, exp)[KR]);
+
+        @test (C[:,KR] * c)[0.1] ≈ 1.1952730862177243
+    end
 end
-
-using ClassicalOrthogonalPolynomials
-using ClassicalOrthogonalPolynomials: grammatrix
-using BlockBandedMatrices: _BandedBlockBandedMatrix
-using LazyBandedMatrices
-
-
-r = range(-1,1; length=4)
-C = ContinuousPolynomial{1}(r)
-Δ = weaklaplacian(C)
-M = grammatrix(C)
-
-KR = Block.(1:5)
-@test (diff(C)'diff(C))[KR,KR] ≈ mats[KR,KR]
-
-KR = Block.(oneto(5))
-Δ[KR,KR]
-M[KR,KR]
-
-KR = Block.(oneto(1000))
-@time F = reversecholesky(Symmetric(parent(Δ+M)[KR,KR]));
-c = F \ (M[KR,KR] * transform(C, exp)[KR]);
-
-@test (C[:,KR] * c)[0.1] ≈ 1.1952730862177243
-
-
