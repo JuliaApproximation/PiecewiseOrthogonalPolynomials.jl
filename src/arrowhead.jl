@@ -92,7 +92,7 @@ function sub_materialize(::ArrowheadLayout, V::AbstractMatrix)
     KR,JR = parentindices(V)
     P = parent(V)
     M,N =  KR.block[end],JR.block[end]
-    ArrowheadMatrix(P.A, P.B[oneto(min(length(P.B),Int(N)-1))], P.C[oneto(min(length(P.B),Int(M)-1))],
+    ArrowheadMatrix(P.A, P.B[oneto(min(length(P.B),Int(N)-1))], P.C[oneto(min(length(P.C),Int(M)-1))],
                     getindex.(P.D, Ref(oneto(Int(M)-1)), Ref(oneto(Int(N)-1))))
 end
 
