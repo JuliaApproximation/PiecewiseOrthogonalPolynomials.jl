@@ -18,7 +18,7 @@ end
 
 ArrowheadMatrix{T}(A, B, C, D) where T = ArrowheadMatrix{T, typeof(A), typeof(B), typeof(C), typeof(D)}(A, B, C, D)
 
-subblockbandwidths(A::ArrowheadMatrix) = (1,1)
+subblockbandwidths(A::Union{ArrowheadMatrix,Symmetric{<:Any,<:ArrowheadMatrix}}) = (1,1)
 function blockbandwidths(A::ArrowheadMatrix)
     l,u = bandwidths(A.D[1])
     max(l,length(A.C)),max(u,length(A.B))
@@ -88,39 +88,42 @@ end
 
 struct ArrowheadLayout <: AbstractBandedBlockBandedLayout end
 struct LazyArrowheadLayout <: AbstractLazyBandedBlockBandedLayout end
-ArrowheadLayouts = Union{ArrowheadLayout,LazyArrowheadLayout}
+ArrowheadLayouts = Union{ArrowheadLayout,LazyArrowheadLayout,SymmetricLayout{ArrowheadLayout},SymmetricLayout{LazyArrowheadLayout}}
 arrowheadlayout(_) = ArrowheadLayout()
 arrowheadlayout(::BandedLazyLayouts) = LazyArrowheadLayout()
 symmetriclayout(lay::ArrowheadLayouts) = SymmetricLayout{typeof(lay)}()
 MemoryLayout(::Type{<:ArrowheadMatrix{<:Any,<:Any,<:Any,<:Any,<:AbstractVector{D}}}) where D = arrowheadlayout(MemoryLayout(D))
 
-sublayout(::Union{ArrowheadLayouts,SymmetricLayout{<:ArrowheadLayouts}},
+sublayout(::ArrowheadLayouts,
           ::Type{<:NTuple{2,BlockSlice{<:BlockRange{1, Tuple{OneTo{Int}}}}}}) = ArrowheadLayout()
 function sub_materialize(::ArrowheadLayout, V::AbstractMatrix)
     KR,JR = parentindices(V)
     P = parent(V)
     M,N =  KR.block[end],JR.block[end]
     ArrowheadMatrix(P.A, P.B, P.C,
-                    getindex.(P.D, Ref(oneto(Int(M)-1)), Ref(oneto(Int(N)-1))))
+                    layout_getindex.(P.D, Ref(oneto(Int(M)-1)), Ref(oneto(Int(N)-1))))
 end
+
+symmetric(A) = Symmetric(A)
+symmetric(A::Union{SymTridiagonal,Symmetric,Diagonal}) = A
 
 function getproperty(F::Symmetric{<:Any,<:ArrowheadMatrix}, d::Symbol)
     P = getfield(F, :data)
     if d == :A
-        return Symmetric(P.A)
+        return symmetric(P.A)
     elseif d == :B
         return P.B
     elseif d == :C
         adjoint.(P.B)
     elseif d == :D
-        Symmetric.(P.D)
+        symmetric.(P.D)
     else
         getfield(F, d)
     end
 end
 
 
-function layout_replace_in_print_matrix(::ArrowheadLayout, A, k, j, s)
+function layout_replace_in_print_matrix(::ArrowheadLayouts, A, k, j, s)
     bi = findblockindex.(axes(A), (k,j))
     K,J = block.(bi)
     k,j = blockindex.(bi)
@@ -195,4 +198,15 @@ function MatrixFactorizations._reverse_chol!(A::ArrowheadMatrix, ::Type{UpperTri
     reversecholesky!(Symmetric(A.A))
 
     return UpperTriangular(A), convert(BlasInt, 0)
+end
+
+tupleadd(::Tuple{}, ::Tuple{}) = ()
+tupleadd(A::Tuple, B::Tuple{}) = A
+tupleadd(A::Tuple{}, B::Tuple) = B
+tupleadd(A::Tuple, B::Tuple) = (first(A) + first(B), tupleadd(tail(A), tail(B))...)
+
+
+
+function +(A::ArrowheadMatrix, B::ArrowheadMatrix)
+    ArrowheadMatrix(A.A + B.A, tupleadd(A.B, B.B), tupleadd(A.C, B.C), A.D + B.D)
 end

@@ -1,19 +1,19 @@
 module PiecewiseOrthogonalPolynomials
 using ClassicalOrthogonalPolynomials, LinearAlgebra, BlockArrays, BlockBandedMatrices, BandedMatrices, ContinuumArrays, QuasiArrays, LazyArrays, LazyBandedMatrices, FillArrays, MatrixFactorizations
 
-import ArrayLayouts: sublayout, sub_materialize, symmetriclayout, SymmetricLayout
+import ArrayLayouts: sublayout, sub_materialize, symmetriclayout, SymmetricLayout, layout_getindex
 import BandedMatrices: _BandedMatrix
 import BlockArrays: BlockSlice, block, blockindex, blockvec
 import BlockBandedMatrices: _BandedBlockBandedMatrix, AbstractBandedBlockBandedMatrix, subblockbandwidths, blockbandwidths, AbstractBandedBlockBandedLayout, layout_replace_in_print_matrix
 import ClassicalOrthogonalPolynomials: grid, ldiv, pad, adaptivetransform_ldiv, grammatrix
-import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBasisLayout, MemoryLayout, layout_broadcasted, ExpansionLayout, basis, plan_grid_transform
+import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBasisLayout, MemoryLayout, layout_broadcasted, ExpansionLayout, basis, plan_grid_transform, grammatrix
 import LazyArrays: paddeddata
 import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec, BandedLazyLayouts, AbstractLazyBandedBlockBandedLayout
-import Base: axes, getindex, ==, \, OneTo, oneto, replace_in_print_matrix, copy, diff, getproperty
+import Base: axes, getindex, +, -, *, /, ==, \, OneTo, oneto, replace_in_print_matrix, copy, diff, getproperty
 import LinearAlgebra: BlasInt
 import MatrixFactorizations: reversecholcopy
 
-export PiecewisePolynomial, ContinuousPolynomial, Derivative, Block
+export PiecewisePolynomial, ContinuousPolynomial, Derivative, Block, weaklaplacian, grammatrix
 
 abstract type AbstractPiecewisePolynomial{order,T,P<:AbstractVector} <: Basis{T} end
 
@@ -235,13 +235,31 @@ end
     Diagonal(mortar(Fill.((step(r) / 2) .* M.diag, N - 1)))
 end
 
+function grammatrix(C::ContinuousPolynomial{1, T, <:AbstractRange}) where T
+    r = C.points
+    @assert extrema(r) == (-1,1)
+    N = length(r) - 1
+    a = ((convert(T,4):4:∞) .* (convert(T,-2):2:∞)) ./ ((1:2:∞) .* (3:2:∞) .* (-1:2:∞))
+    b = (((convert(T,2):2:∞) ./ (3:2:∞)).^2 .* (convert(T,2) ./ (1:2:∞) .+ convert(T,2) ./ (5:2:∞)))
 
-@simplify function *(Ac::QuasiAdjoint{<:Any,<:ContinuousPolynomial}, B::ContinuousPolynomial)
-    A = Ac'
-    P = ContinuousPolynomial{0}(A)
-    Q = ContinuousPolynomial{0}(B)
-    (P \ A)' * (P'Q) * (Q \ B)
+    a11 = LazyBandedMatrices.Bidiagonal(Vcat(2/(3N), Fill(4/(3N), N-1), 2/(3N)), Fill(1/(3N), N), :U)
+    a21 = _BandedMatrix(Fill(2/(3N), 2, N), N+1, 1, 0)
+    a31 = _BandedMatrix(Vcat(Fill(-4/(15N), 1, N), Fill(4/(15N), 1, N)), N+1, 1, 0)
+
+    Symmetric(ArrowheadMatrix(a11, (a21, a31), (),
+                Fill(_BandedMatrix(Vcat((-a/N)',
+                Zeros(1,∞),
+                (b/N)'), ∞, 0, 2), N)))
 end
+
+
+function grammatrix(C::ContinuousPolynomial)
+    P = ContinuousPolynomial{0}(C)
+    L = P \ C
+    L' * grammatrix(P) * L
+end
+
+
 
 #####
 # Derivative
@@ -258,6 +276,17 @@ function diff(C::ContinuousPolynomial{1,T}; dims=1) where T
     M = BlockVcat(Hcat(Ones{T}(N) .* [zero(T); s] , -Ones{T}(N) .* [s; zero(T)] ), H)
     P = ContinuousPolynomial{0}(C)
     ApplyQuasiMatrix(*, P, _BandedBlockBandedMatrix(M', (axes(P, 2), axes(C, 2)), (0, 0), (0, 1)))
+end
+
+function weaklaplacian(C::ContinuousPolynomial{1,T,<:AbstractRange}) where T
+    r = C.points
+    @assert extrema(r) == (-1,1)
+    N = length(r)
+    s = step(r)
+    t1 = Vcat(convert(T, N-1)/2, Fill(convert(T, N-1), N-2), convert(T, N-1)/2)
+    t2 = Fill(-convert(T, N-1)/2, N-1)
+    Symmetric(ArrowheadMatrix(LazyBandedMatrices.Bidiagonal(t1, t2, :U), (), (),
+        Fill(Diagonal(convert(T, 16) .* (1:∞) .^ 2 ./ (s .* ((2:2:∞) .+ 1))), N-1)))
 end
 
 

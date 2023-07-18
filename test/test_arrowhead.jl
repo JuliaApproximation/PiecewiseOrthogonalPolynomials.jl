@@ -46,76 +46,23 @@ using ClassicalOrthogonalPolynomials: grammatrix
 using BlockBandedMatrices: _BandedBlockBandedMatrix
 using LazyBandedMatrices
 
-function weaklaplacian(r)
-    N = length(r)
-    s = step(r)
-    t1 = Vcat((N-1)/2, Fill((N-1), N-2), (N-1)/2)
-    t2 = Fill(-(N-1)/2, N-1)
-    ArrowheadMatrix(LazyBandedMatrices.SymTridiagonal(t1, t2), BandedMatrix{Float64, Matrix{Float64}, Base.OneTo{Int}}[], BandedMatrix{Float64, Matrix{Float64}, Base.OneTo{Int}}[],
-        Fill(Diagonal(16 .* (1:∞) .^ 2 ./ (s .* ((2:2:∞) .+ 1))), N-1))
-end
 
 r = range(-1,1; length=4)
-mats = weaklaplacian(r)
 C = ContinuousPolynomial{1}(r)
+Δ = weaklaplacian(C)
+M = grammatrix(C)
+
 KR = Block.(1:5)
 @test (diff(C)'diff(C))[KR,KR] ≈ mats[KR,KR]
 
+KR = Block.(oneto(5))
+Δ[KR,KR]
+M[KR,KR]
 
-function mass_matrix_arrow_head(r)
-    T = eltype(r)
+KR = Block.(oneto(1000))
+@time F = reversecholesky(Symmetric(parent(Δ+M)[KR,KR]));
+c = F \ (M[KR,KR] * transform(C, exp)[KR]);
 
-    N = length(r) - 1
+@test (C[:,KR] * c)[0.1] ≈ 1.1952730862177243
 
-    a11 = SymTridiagonal(vcat(2/(3N), fill(4/(3N), N-1), 2/(3N)), fill(1/(3N), N))
-    a21 = _BandedMatrix(Fill(2/(3N), 2, N+1), N, 0, 1)
-    a31 = _BandedMatrix(Vcat(Fill(4/(15N), 1, N+1), Fill(-4/(15N), 1, N+1)), N, 0, 1)
-    
-    A = BlockVcat(a11, a21, a31)
-    BlockHcat(A, BlockVcat(a21', Zeros{T}(N,N), Zeros{T}(N,N)), BlockVcat(a31', Zeros{T}(N,N), Zeros{T}(N,N)))
-end
-
-function mass_matrix_bubble(j, r)
-    N = length(r) - 1
-    
-    d = grammatrix(Legendre()).diag
-    L = (Legendre() \ Weighted(Jacobi(1,1))).args[2].dv
-
-    a = j > 2 ? -d[j]*L[j-2]*L[j] : 0.0
-    [a / N; L[j]^2 * (d[j] + d[j+2]) / N; -d[j+2]*L[j]*L[j+2]/ N]
-end
-
-r = range(-1,1; length=3);
-C = ContinuousPolynomial{1}(r);
-M = C' * C
-
-T = Float64
-d =convert(T,2) ./ (1:2:∞)
-L = (2:2:∞) ./ (3:2:∞)
-
-T = Float64
-
-function grammatrix(C::ContinuousPolynomial{1, T, <:AbstractRange}) where T
-    r = C.points
-    N = length(r) - 1
-    a = ((convert(T,4):4:∞) .* (convert(T,-2):2:∞)) ./ ((1:2:∞) .* (3:2:∞) .* (-1:2:∞))
-    b = (((convert(T,2):2:∞) ./ (3:2:∞)).^2 .* (convert(T,2) ./ (1:2:∞) .+ convert(T,2) ./ (5:2:∞)))
-
-    a11 = Bidiagonal(vcat(2/(3N), fill(4/(3N), N-1), 2/(3N)), fill(1/(3N), N), :U)
-    a21 = _BandedMatrix(Fill(2/(3N), 2, N), N+1, 1, 0)
-    a31 = _BandedMatrix(Vcat(Fill(-4/(15N), 1, N), Fill(4/(15N), 1, N)), N+1, 1, 0)
-
-    Symmetric(ArrowheadMatrix(a11, (a21, a31), (),
-                Fill(_BandedMatrix(Vcat((-a/N)',
-                Zeros(1,∞),
-                (b/N)'), ∞, 0, 2), N)))
-end
-
-S = grammatrix(C)
-N = 10
-KR = Block.(oneto(N))
-@test S[KR,KR] ≈ (C'C)[KR,KR]
-
-
-# c = (convert(T,2) ./ (5:2:∞)) .* ((convert(T,2):2:∞) ./ (3:2:∞)) .* ((convert(T,6):2:∞) ./ (7:2:∞))
 
