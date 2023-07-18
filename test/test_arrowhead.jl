@@ -90,44 +90,32 @@ C = ContinuousPolynomial{1}(r);
 M = C' * C
 
 T = Float64
-convert(T,2) ./ (1:2:∞)
-
+d =convert(T,2) ./ (1:2:∞)
 L = (2:2:∞) ./ (3:2:∞)
 
 T = Float64
-a = ((4:4:∞) .* (-2:2:∞)) ./ ((1:2:∞) .* (3:2:∞) .* (-1:2:∞))
-b = (((2:2:∞) ./ (3:2:∞)).^2 .* (convert(T,2) ./ (1:2:∞) .+ convert(T,2) ./ (5:2:∞)))
 
-c = (convert(T,2) ./ (5:2:∞)) .* ((2:2:∞) ./ (3:2:∞)) .* ((6:2:∞) ./ (7:2:∞))
+function grammatrix(C::ContinuousPolynomial{1, T, <:AbstractRange}) where T
+    r = C.points
+    N = length(r) - 1
+    a = ((convert(T,4):4:∞) .* (convert(T,-2):2:∞)) ./ ((1:2:∞) .* (3:2:∞) .* (-1:2:∞))
+    b = (((convert(T,2):2:∞) ./ (3:2:∞)).^2 .* (convert(T,2) ./ (1:2:∞) .+ convert(T,2) ./ (5:2:∞)))
 
-T = eltype(r)
+    a11 = Bidiagonal(vcat(2/(3N), fill(4/(3N), N-1), 2/(3N)), fill(1/(3N), N), :U)
+    a21 = _BandedMatrix(Fill(2/(3N), 2, N), N+1, 1, 0)
+    a31 = _BandedMatrix(Vcat(Fill(-4/(15N), 1, N), Fill(4/(15N), 1, N)), N+1, 1, 0)
 
-N = length(r) - 1
+    Symmetric(ArrowheadMatrix(a11, (a21, a31), (),
+                Fill(_BandedMatrix(Vcat((-a/N)',
+                Zeros(1,∞),
+                (b/N)'), ∞, 0, 2), N)))
+end
 
-a11 = SymTridiagonal(vcat(2/(3N), fill(4/(3N), N-1), 2/(3N)), fill(1/(3N), N))
-a21 = _BandedMatrix(Fill(2/(3N), 2, N), N+1, 1, 0)
-a31 = _BandedMatrix(Vcat(Fill(-4/(15N), 1, N), Fill(4/(15N), 1, N)), N+1, 1, 0)
-
-
-M̃ = Symmetric(ArrowheadMatrix(a11, [a21, a31],
-    BandedMatrix{Float64, Matrix{Float64}, Base.OneTo{Int}}[],
-    Fill(_BandedMatrix(Vcat((-a/N)',
-     Zeros(1,∞),
-    (b/N)'), ∞, 0, 2), N)))
-
-
-S = Symmetric(parent(M̃)[Block.(oneto(5)), Block.(oneto(5))])
-@time reversecholesky!(S)
-
-@mass_matrix_bubble(3, r)[1] ≈ M[Block(2), Block(4)][1,1] ≈ M[Block(2), Block(4)][2,2] ≈ M[Block(2), Block(4)][3,3]
+S = grammatrix(C)
+N = 10
+KR = Block.(oneto(N))
+@test S[KR,KR] ≈ (C'C)[KR,KR]
 
 
-mass_matrix_bubble(3, r)[2] ≈ M[Block(4), Block(4)][1,1] ≈ M[Block(4), Block(4)][2,2] ≈ M[Block(4), Block(4)][3,3]
-mass_matrix_bubble(3, r)[3] ≈ M[Block(6), Block(4)][1,1] ≈ M[Block(6), Block(4)][2,2] ≈ M[Block(6), Block(4)][3,3]
+# c = (convert(T,2) ./ (5:2:∞)) .* ((convert(T,2):2:∞) ./ (3:2:∞)) .* ((convert(T,6):2:∞) ./ (7:2:∞))
 
-
-@test mass_matrix_arrow_head(r)[Block.(1:3), Block(1)] ≈ (C' * C)[Block.(1:3), Block(1)]
-
-r = range(-1,1; length=5);
-C = ContinuousPolynomial{1}(r);
-mass_matrix_arrow_head(r)[Block.(1:3), Block(1)] ≈ (C' * C)[Block.(1:3), Block(1)]
