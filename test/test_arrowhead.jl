@@ -1,4 +1,4 @@
-using PiecewiseOrthogonalPolynomials, FillArrays, BandedMatrices, MatrixFactorizations, BlockBandedMatrices, Base64, Test
+using PiecewiseOrthogonalPolynomials, FillArrays, BandedMatrices, MatrixFactorizations, BlockBandedMatrices, Base64, ClassicalOrthogonalPolynomials, Test
 using PiecewiseOrthogonalPolynomials: ArrowheadMatrix
 using InfiniteArrays, BlockArrays
 using BandedMatrices: _BandedMatrix
