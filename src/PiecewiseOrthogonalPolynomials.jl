@@ -225,11 +225,16 @@ end
 # Gram matrix
 ######
 
-@simplify function *(Ac::QuasiAdjoint{<:Any,<:ContinuousPolynomial{0}}, B::ContinuousPolynomial{0})
-    A = Ac'
-    T = promote_type(eltype(A), eltype(B))
+function grammatrix(A::ContinuousPolynomial{0,T}) where T
     r = A.points
-    @assert r == B.points
+    N = length(r) - 1
+    hs = diff(r)
+    M = grammatrix(Legendre{T}())
+    ArrowheadMatrix{T}(Diagonal(Fill(hs[1], N)), (), (), [Diagonal(M.diag[2:end] * h/2) for h in hs])
+end
+
+function grammatrix(A::ContinuousPolynomial{0,T, <:AbstractRange}) where T
+    r = A.points
     N = length(r)
     M = grammatrix(Legendre{T}())
     Diagonal(mortar(Fill.((step(r) / 2) .* M.diag, N - 1)))
@@ -237,19 +242,20 @@ end
 
 function grammatrix(C::ContinuousPolynomial{1, T, <:AbstractRange}) where T
     r = C.points
-    @assert extrema(r) == (-1,1)
+
     N = length(r) - 1
+    h = step(r) # 2/N
     a = ((convert(T,4):4:∞) .* (convert(T,-2):2:∞)) ./ ((1:2:∞) .* (3:2:∞) .* (-1:2:∞))
     b = (((convert(T,2):2:∞) ./ (3:2:∞)).^2 .* (convert(T,2) ./ (1:2:∞) .+ convert(T,2) ./ (5:2:∞)))
 
-    a11 = LazyBandedMatrices.Bidiagonal(Vcat(2/(3N), Fill(4/(3N), N-1), 2/(3N)), Fill(1/(3N), N), :U)
-    a21 = _BandedMatrix(Fill(2/(3N), 2, N), N+1, 1, 0)
-    a31 = _BandedMatrix(Vcat(Fill(-4/(15N), 1, N), Fill(4/(15N), 1, N)), N+1, 1, 0)
+    a11 = LazyBandedMatrices.Bidiagonal(Vcat(h/3, Fill(2h/3, N-1), h/3), Fill(h/6, N), :U)
+    a21 = _BandedMatrix(Fill(h/3, 2, N), N+1, 1, 0)
+    a31 = _BandedMatrix(Vcat(Fill(-2h/15, 1, N), Fill(2h/15, 1, N)), N+1, 1, 0)
 
     Symmetric(ArrowheadMatrix(a11, (a21, a31), (),
-                Fill(_BandedMatrix(Vcat((-a/N)',
+                Fill(_BandedMatrix(Vcat((-h*a/2)',
                 Zeros(1,∞),
-                (b/N)'), ∞, 0, 2), N)))
+                (h*b/2)'), ∞, 0, 2), N)))
 end
 
 
@@ -257,6 +263,19 @@ function grammatrix(C::ContinuousPolynomial)
     P = ContinuousPolynomial{0}(C)
     L = P \ C
     L' * grammatrix(P) * L
+end
+
+@simplify function *(Ac::QuasiAdjoint{<:Any,<:ContinuousPolynomial}, B::ContinuousPolynomial)
+    A = Ac'
+    A == B && return grammatrix(A)
+    P = ContinuousPolynomial{0}(A)
+    (P \ A)' * grammatrix(P) * (P \ B)
+end
+
+@simplify function *(Ac::QuasiAdjoint{<:Any,<:ContinuousPolynomial{0}}, B::ContinuousPolynomial{0})
+    A = Ac'
+    @assert A == B
+    grammatrix(A)
 end
 
 
@@ -280,13 +299,13 @@ end
 
 function weaklaplacian(C::ContinuousPolynomial{1,T,<:AbstractRange}) where T
     r = C.points
-    @assert extrema(r) == (-1,1)
     N = length(r)
     s = step(r)
-    t1 = Vcat(convert(T, N-1)/2, Fill(convert(T, N-1), N-2), convert(T, N-1)/2)
-    t2 = Fill(-convert(T, N-1)/2, N-1)
+    si = inv(s)
+    t1 = Vcat(-si, Fill(-2si, N-2), -si)
+    t2 = Fill(si, N-1)
     Symmetric(ArrowheadMatrix(LazyBandedMatrices.Bidiagonal(t1, t2, :U), (), (),
-        Fill(Diagonal(convert(T, 16) .* (1:∞) .^ 2 ./ (s .* ((2:2:∞) .+ 1))), N-1)))
+        Fill(Diagonal(convert(T, -16) .* (1:∞) .^ 2 ./ (s .* ((2:2:∞) .+ 1))), N-1)))
 end
 
 
