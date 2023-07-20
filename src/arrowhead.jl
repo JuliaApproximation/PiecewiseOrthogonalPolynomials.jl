@@ -18,7 +18,11 @@ end
 
 ArrowheadMatrix{T}(A, B, C, D) where T = ArrowheadMatrix{T, typeof(A), typeof(B), typeof(C), typeof(D)}(A, B, C, D)
 
-subblockbandwidths(A::Union{ArrowheadMatrix,Symmetric{<:Any,<:ArrowheadMatrix}}) = (1,1)
+const ArrowheadMatrices = Union{ArrowheadMatrix,Symmetric{<:Any,<:ArrowheadMatrix},Hermitian{<:Any,<:ArrowheadMatrix},
+                                UpperOrLowerTriangular{<:Any,<:ArrowheadMatrix}}
+
+subblockbandwidths(A::ArrowheadMatrices) = (1,1)
+
 function blockbandwidths(A::ArrowheadMatrix)
     l,u = bandwidths(A.D[1])
     max(l,length(A.C)),max(u,length(A.B))
