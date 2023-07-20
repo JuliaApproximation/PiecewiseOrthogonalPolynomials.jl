@@ -1,15 +1,19 @@
 module PiecewiseOrthogonalPolynomials
-using ClassicalOrthogonalPolynomials, LinearAlgebra, BlockArrays, BlockBandedMatrices, ContinuumArrays, QuasiArrays, LazyArrays, LazyBandedMatrices, FillArrays
+using ClassicalOrthogonalPolynomials, LinearAlgebra, BlockArrays, BlockBandedMatrices, BandedMatrices, ContinuumArrays, QuasiArrays, LazyArrays, LazyBandedMatrices, FillArrays, MatrixFactorizations, ArrayLayouts
 
+import ArrayLayouts: sublayout, sub_materialize, symmetriclayout, transposelayout, SymmetricLayout, HermitianLayout, TriangularLayout, layout_getindex, materialize!, MatLdivVec, AbstractStridedLayout, triangulardata
+import BandedMatrices: _BandedMatrix
 import BlockArrays: BlockSlice, block, blockindex, blockvec
-import BlockBandedMatrices: _BandedBlockBandedMatrix
-import ClassicalOrthogonalPolynomials: grid, massmatrix, ldiv, pad, adaptivetransform_ldiv
-import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBasisLayout, MemoryLayout, layout_broadcasted, ExpansionLayout, basis, plan_grid_transform
+import BlockBandedMatrices: _BandedBlockBandedMatrix, AbstractBandedBlockBandedMatrix, subblockbandwidths, blockbandwidths, AbstractBandedBlockBandedLayout, layout_replace_in_print_matrix
+import ClassicalOrthogonalPolynomials: grid, ldiv, pad, adaptivetransform_ldiv, grammatrix
+import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBasisLayout, MemoryLayout, layout_broadcasted, ExpansionLayout, basis, plan_grid_transform, grammatrix
 import LazyArrays: paddeddata
-import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec
-import Base: axes, getindex, ==, \, OneTo
+import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec, BandedLazyLayouts, AbstractLazyBandedBlockBandedLayout, UpperOrLowerTriangular
+import Base: axes, getindex, +, -, *, /, ==, \, OneTo, oneto, replace_in_print_matrix, copy, diff, getproperty, adjoint, transpose, tail
+import LinearAlgebra: BlasInt
+import MatrixFactorizations: reversecholcopy
 
-export PiecewisePolynomial, ContinuousPolynomial, Derivative, Block
+export PiecewisePolynomial, ContinuousPolynomial, Derivative, Block, weaklaplacian, grammatrix
 
 abstract type AbstractPiecewisePolynomial{order,T,P<:AbstractVector} <: Basis{T} end
 
@@ -204,35 +208,83 @@ function \(P::ContinuousPolynomial{0}, C::ContinuousPolynomial{1})
     _BandedBlockBandedMatrix(dat, axes(P, 2), (1, 1), (0, 1))
 end
 
+function \(P::ContinuousPolynomial{0, <:Any, <:AbstractRange}, C::ContinuousPolynomial{1, <:Any, <:AbstractRange})
+    T = promote_type(eltype(P), eltype(C))
+    @assert P.points == C.points
+    v = (convert(T, 2):2:∞) ./ (3:2:∞)
+    N = length(P.points)
+    L = ArrowheadMatrix(_BandedMatrix(Ones{T}(2, N)/2, oneto(N-1), 0, 1),
+        (_BandedMatrix(Fill(v[1], 1, N-1), oneto(N-1), 0, 0),),
+        (_BandedMatrix(Vcat(Ones{T}(1, N)/2, -Ones{T}(1, N)/2), oneto(N-1), 0, 1),),
+        Fill(_BandedMatrix(Hcat(v, Zeros{T}(∞), -v)', axes(v,1), 1, 1), N-1))
+end
+
+
+
 ######
 # Gram matrix
 ######
 
-@simplify function *(Ac::QuasiAdjoint{<:Any,<:ContinuousPolynomial{0}}, B::ContinuousPolynomial{0})
-    A = Ac'
-    T = promote_type(eltype(A), eltype(B))
+function grammatrix(A::ContinuousPolynomial{0,T}) where T
     r = A.points
-    @assert r == B.points
+    N = length(r) - 1
+    hs = diff(r)
+    M = grammatrix(Legendre{T}())
+    ArrowheadMatrix{T}(Diagonal(Fill(hs[1], N)), (), (), [Diagonal(M.diag[2:end] * h/2) for h in hs])
+end
+
+function grammatrix(A::ContinuousPolynomial{0,T, <:AbstractRange}) where T
+    r = A.points
     N = length(r)
-    M = massmatrix(Legendre{T}())
+    M = grammatrix(Legendre{T}())
     Diagonal(mortar(Fill.((step(r) / 2) .* M.diag, N - 1)))
 end
 
+function grammatrix(C::ContinuousPolynomial{1, T, <:AbstractRange}) where T
+    r = C.points
+
+    N = length(r) - 1
+    h = step(r) # 2/N
+    a = ((convert(T,4):4:∞) .* (convert(T,-2):2:∞)) ./ ((1:2:∞) .* (3:2:∞) .* (-1:2:∞))
+    b = (((convert(T,2):2:∞) ./ (3:2:∞)).^2 .* (convert(T,2) ./ (1:2:∞) .+ convert(T,2) ./ (5:2:∞)))
+
+    a11 = LazyBandedMatrices.Bidiagonal(Vcat(h/3, Fill(2h/3, N-1), h/3), Fill(h/6, N), :U)
+    a21 = _BandedMatrix(Fill(h/3, 2, N), N+1, 1, 0)
+    a31 = _BandedMatrix(Vcat(Fill(-2h/15, 1, N), Fill(2h/15, 1, N)), N+1, 1, 0)
+
+    Symmetric(ArrowheadMatrix(a11, (a21, a31), (),
+                Fill(_BandedMatrix(Vcat((-h*a/2)',
+                Zeros(1,∞),
+                (h*b/2)'), ∞, 0, 2), N)))
+end
+
+
+function grammatrix(C::ContinuousPolynomial)
+    P = ContinuousPolynomial{0}(C)
+    L = P \ C
+    L' * grammatrix(P) * L
+end
 
 @simplify function *(Ac::QuasiAdjoint{<:Any,<:ContinuousPolynomial}, B::ContinuousPolynomial)
     A = Ac'
+    A == B && return grammatrix(A)
     P = ContinuousPolynomial{0}(A)
-    Q = ContinuousPolynomial{0}(B)
-    (P \ A)' * (P'Q) * (Q \ B)
+    (P \ A)' * grammatrix(P) * (P \ B)
 end
+
+@simplify function *(Ac::QuasiAdjoint{<:Any,<:ContinuousPolynomial{0}}, B::ContinuousPolynomial{0})
+    A = Ac'
+    @assert A == B
+    grammatrix(A)
+end
+
+
 
 #####
 # Derivative
 #####
 
-@simplify function *(D::Derivative, C::ContinuousPolynomial{1})
-    T = promote_type(eltype(D), eltype(C))
-
+function diff(C::ContinuousPolynomial{1,T}; dims=1) where T
     # Legendre() \ (D*Weighted(Jacobi(1,1)))
     r = C.points
     N = length(r)
@@ -242,7 +294,18 @@ end
     H = BlockBroadcastArray(hcat, z, v)
     M = BlockVcat(Hcat(Ones{T}(N) .* [zero(T); s] , -Ones{T}(N) .* [s; zero(T)] ), H)
     P = ContinuousPolynomial{0}(C)
-    P * _BandedBlockBandedMatrix(M', (axes(P, 2), axes(C, 2)), (0, 0), (0, 1))
+    ApplyQuasiMatrix(*, P, _BandedBlockBandedMatrix(M', (axes(P, 2), axes(C, 2)), (0, 0), (0, 1)))
+end
+
+function weaklaplacian(C::ContinuousPolynomial{1,T,<:AbstractRange}) where T
+    r = C.points
+    N = length(r)
+    s = step(r)
+    si = inv(s)
+    t1 = Vcat(-si, Fill(-2si, N-2), -si)
+    t2 = Fill(si, N-1)
+    Symmetric(ArrowheadMatrix(LazyBandedMatrices.Bidiagonal(t1, t2, :U), (), (),
+        Fill(Diagonal(convert(T, -16) .* (1:∞) .^ 2 ./ (s .* ((2:2:∞) .+ 1))), N-1)))
 end
 
 
@@ -267,6 +330,8 @@ function layout_broadcasted(::Tuple{ExpansionLayout{PiecewisePolynomialLayout{0}
     P = ContinuousPolynomial{0}(C)
     (a .* P) * (P \ C)
 end
+
+include("arrowhead.jl")
 
 
 end # module

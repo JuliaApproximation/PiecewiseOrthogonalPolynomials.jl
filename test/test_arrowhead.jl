@@ -1,0 +1,110 @@
+using PiecewiseOrthogonalPolynomials, FillArrays, BandedMatrices, MatrixFactorizations, BlockBandedMatrices, Base64, ClassicalOrthogonalPolynomials, Test
+using PiecewiseOrthogonalPolynomials: ArrowheadMatrix
+using InfiniteArrays, BlockArrays
+using BandedMatrices: _BandedMatrix
+import Base: oneto, OneTo
+
+
+@testset "ArrowheadMatrix" begin
+    @testset "Algebra" begin
+        n = 4; p = 5;
+        A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)), 
+                                ntuple(_ -> BandedMatrix((0 => randn(n-1), -1 => randn(n-1)), (n,n-1)), 2),
+                                ntuple(_ -> BandedMatrix((0 => randn(n), 1 => randn(n-1)), (n-1,n)), 3),
+                            fill(BandedMatrix((0 => randn(p) .+ 10, 2 => randn(p-2), -1=> randn(p-1)), (p, p)), n-1))
+
+        @test 2A isa ArrowheadMatrix
+        @test A*2 isa ArrowheadMatrix
+        @test 2\A isa ArrowheadMatrix
+        @test A/2 isa ArrowheadMatrix
+        @test A+A isa ArrowheadMatrix
+        @test A-A isa ArrowheadMatrix
+
+        @test 2A == A*2 == A+A == 2Matrix(A)
+        @test all(iszero,A-A)
+        @test A + A' == A' + A == Matrix(A) + Matrix(A)'
+        @test A - A' == Matrix(A) - Matrix(A)'
+        @test A' - A == Matrix(A)' - Matrix(A)
+        @test A/2 == 2\A == Matrix(A)/2
+    end
+
+    @testset "UpperTriangular" begin
+        n = 4; p = 5;
+        A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)), 
+                                [BandedMatrix((0 => randn(n-1), -1 => randn(n-1)), (n,n-1)) for _=1:2],
+                                [BandedMatrix((0 => randn(n), 1 => randn(n-1)), (n-1,n)) for _=1:2],
+                            fill(BandedMatrix((0 => randn(p) .+ 10, 2 => randn(p-2), -1=> randn(p-1)), (p, p)), n-1))
+
+        c = randn(size(A,1))
+        for T in (UpperTriangular(A), UnitUpperTriangular(A), LowerTriangular(A), UnitLowerTriangular(A),
+                  UpperTriangular(A)')
+            @test T \ c ≈ Matrix(T) \ c
+        end
+        for Typ in (UpperTriangular, UnitUpperTriangular)
+            @test Typ(A).A == Typ(A.A)
+            @test Typ(A).B == A.B
+            @test isempty(Typ(A).C)
+            @test Typ(A).D == map(Typ,A.D)
+        end
+        for Typ in (LowerTriangular, UnitLowerTriangular)
+            @test Typ(A).A == Typ(A.A)
+            @test isempty(Typ(A).B)
+            @test Typ(A).C == A.C
+            @test Typ(A).D == map(Typ,A.D)
+        end
+    end
+
+    @testset "reversecholesky" begin
+        n = 3; p = 5;
+        A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)), 
+                                [BandedMatrix((0 => randn(n-1), -1 => randn(n-1)), (n,n-1)) for _=1:2],
+                                BandedMatrix{Float64, Matrix{Float64}, OneTo{Int}}[],
+                            fill(BandedMatrix((0 => randn(p) .+ 10, 2 => randn(p-2)), (p, p)), n-1))
+
+        @test reversecholesky(Symmetric(Matrix(A))).U ≈ reversecholesky!(Symmetric(copy(A))).U
+
+
+        A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)), 
+                                [BandedMatrix((0 => randn(n-1), -1 => randn(n-1)), (n,n-1)) for _=1:2],
+                                BandedMatrix{Float64, Matrix{Float64}, OneTo{Int}}[],
+                            fill(BandedMatrix((0 => randn(p) .+ 10, 1 => randn(p-1), 2 => randn(p-2)), (p, p)), n-1))
+
+
+        @test reversecholesky(Symmetric(Matrix(A))).U ≈ reversecholesky!(Symmetric(copy(A))).U
+    end
+
+    @testset "operators" begin
+        C = ContinuousPolynomial{1}(range(-1,1; length=4))
+        P = ContinuousPolynomial{0}(range(-1,1; length=4))
+        P̃ = ContinuousPolynomial{0}(collect(range(-1,1; length=4)))
+
+        L = P\C
+        @test L isa ArrowheadMatrix
+        KR = Block.(OneTo(5))
+        @test (P̃\C)[KR,KR] == @inferred(L[KR,KR])
+        @test blockbandwidths(L) == (1,1)
+        @test subblockbandwidths(L) == (1,1)
+
+        @test stringmime("text/plain", L[Block.(OneTo(3)), Block.(OneTo(3))]) == "3×3-blocked 9×10 ArrowheadMatrix{Float64, BandedMatrix{Float64, Fill{Float64, 2, Tuple{OneTo{$Int}, OneTo{$Int}}}, OneTo{$Int}}, Tuple{BandedMatrix{Float64, Fill{Float64, 2, Tuple{OneTo{$Int}, OneTo{$Int}}}, OneTo{$Int}}}, Tuple{BandedMatrix{Float64, LazyArrays.ApplyArray{Float64, 2, typeof(vcat), Tuple{Fill{Float64, 2, Tuple{OneTo{$Int}, OneTo{$Int}}}, Fill{Float64, 2, Tuple{OneTo{$Int}, OneTo{$Int}}}}}, OneTo{$Int}}}, Vector{BandedMatrix{Float64, Matrix{Float64}, OneTo{$Int}}}}:\n  0.5   0.5    ⋅    ⋅   │   0.666667    ⋅          ⋅        │   ⋅    ⋅    ⋅ \n   ⋅    0.5   0.5   ⋅   │    ⋅         0.666667    ⋅        │   ⋅    ⋅    ⋅ \n   ⋅     ⋅    0.5  0.5  │    ⋅          ⋅         0.666667  │   ⋅    ⋅    ⋅ \n ───────────────────────┼───────────────────────────────────┼───────────────\n -0.5   0.5    ⋅    ⋅   │   0.0         ⋅          ⋅        │  0.8   ⋅    ⋅ \n   ⋅   -0.5   0.5   ⋅   │    ⋅         0.0         ⋅        │   ⋅   0.8   ⋅ \n   ⋅     ⋅   -0.5  0.5  │    ⋅          ⋅         0.0       │   ⋅    ⋅   0.8\n ───────────────────────┼───────────────────────────────────┼───────────────\n   ⋅     ⋅     ⋅    ⋅   │  -0.666667    ⋅          ⋅        │  0.0   ⋅    ⋅ \n   ⋅     ⋅     ⋅    ⋅   │    ⋅        -0.666667    ⋅        │   ⋅   0.0   ⋅ \n   ⋅     ⋅     ⋅    ⋅   │    ⋅          ⋅        -0.666667  │   ⋅    ⋅   0.0"
+    end
+
+    @testset "Helmholtz solve" begin
+        r = range(-1,1; length=4)
+        C = ContinuousPolynomial{1}(r)
+        Δ = weaklaplacian(C)
+        M = grammatrix(C)
+
+        KR = Block.(1:5)
+        @test -(diff(C)'diff(C))[KR,KR] ≈ Δ[KR,KR]
+
+        KR = Block.(oneto(100))
+        @time F = reversecholesky(Symmetric(parent(-Δ+M)[KR,KR]));
+
+        x = M[KR,KR] * transform(C, exp)[KR]
+        @time c = F \ x;
+
+        @test_broken c isa PseudoBlockArray # TODO: overload copy_similar in BlockArrays.jl
+
+        @test (C[:,KR] * c)[0.1] ≈ 1.1952730862177243
+    end
+end

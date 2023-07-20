@@ -1,7 +1,9 @@
-using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, BlockArrays, Test, FillArrays, LinearAlgebra, StaticArrays, ContinuumArrays
+using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, BlockArrays, Test, FillArrays, LinearAlgebra, StaticArrays, ContinuumArrays, Random
 import Base: OneTo
 import LazyBandedMatrices: MemoryLayout, AbstractBandedBlockBandedLayout, BlockVec
 import ForwardDiff: derivative
+
+Random.seed!(0)
 
 @testset "transform" begin
     for r in (range(-1, 1; length=2), range(-1, 1; length=4), range(0, 1; length=4)), T in (Chebyshev(), Legendre())
@@ -66,7 +68,19 @@ end
         R = P\C
         @test R[KR,JR]'*((P'P)[KR,KR]*R[KR,JR]) ≈ (C'C)[JR,JR]
         @test (P'C)[JR,JR] ≈ (C'P)[JR,JR]'
+    end
 
+    @testset "collect versus range" begin
+        for r in (range(-1,1; length=4), range(0,1; length=4))
+            P = ContinuousPolynomial{0}(r)
+            P̃ = ContinuousPolynomial{0}(collect(r))
+            KR = Block.(1:5)
+            @test grammatrix(P)[KR,KR] ≈ grammatrix(P̃)[KR,KR]
+
+            C = ContinuousPolynomial{1}(r)
+            C̃ = ContinuousPolynomial{1}(collect(r))
+            @test grammatrix(C)[KR,KR] ≈ grammatrix(C̃)[KR,KR]
+        end
     end
 end
 
@@ -102,20 +116,21 @@ end
 end
 
 @testset "weak Laplacian" begin
-    r = range(0,1; length=5)
-    C = ContinuousPolynomial{1}(r)
-    x = axes(C,1)
-    D = Derivative(x)
-    Δ = -(D*C)'*(D*C)
-    M = C'C
-    L = Δ + M
+    for r in (range(0,1; length=5), range(-1,1; length=5))
+        C = ContinuousPolynomial{1}(r)
+        Δ = -diff(C)'*diff(C)
+        KR = Block.(1:10)
+        @test Δ[KR,KR] ≈ weaklaplacian(C)[KR,KR]
 
-    @test MemoryLayout(Δ) isa AbstractBandedBlockBandedLayout
-    @test MemoryLayout(M) isa AbstractBandedBlockBandedLayout
-    @test MemoryLayout(L) isa AbstractBandedBlockBandedLayout
+        M = C'C
+        L = Δ + M
 
-    KR = Block.(1:10)
-    @time L[KR,KR]
+        @test MemoryLayout(Δ) isa AbstractBandedBlockBandedLayout
+        @test MemoryLayout(L) isa AbstractBandedBlockBandedLayout
+
+        KR = Block.(1:10)
+        @test L[KR,KR] ≈ (weaklaplacian(C) + grammatrix(C))[KR,KR]
+    end
 end
 
 @testset "conversion" begin
@@ -153,3 +168,5 @@ end
 
     
 end
+
+include("test_arrowhead.jl")

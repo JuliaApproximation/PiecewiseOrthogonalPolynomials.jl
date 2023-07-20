@@ -1,9 +1,11 @@
 name = "PiecewiseOrthogonalPolynomials"
 uuid = "4461d12d-4663-4550-8580-cb764c85e20f"
 authors = ["Sheehan Olver <solver@mac.com>"]
-version = "0.0.3"
+version = "0.1.0"
 
 [deps]
+ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
+BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
 BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
 BlockBandedMatrices = "ffab5731-97b5-5995-9138-79e8c1846df0"
 ClassicalOrthogonalPolynomials = "b30e2e7b-c4ee-47da-9d5f-2c5c27239acd"
@@ -14,25 +16,29 @@ InfiniteLinearAlgebra = "cde9dba0-b1de-11e9-2c62-0bab9446c55c"
 LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
 LazyBandedMatrices = "d7e5e226-e90b-4449-9968-0f923699bf6f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MatrixFactorizations = "a3b82374-2e81-5b9e-98ce-41277c0e4c87"
 QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 
 [compat]
 BlockArrays = "0.16.25"
-BlockBandedMatrices = "0.11.10, 0.12"
-ClassicalOrthogonalPolynomials = "0.7, 0.8, 0.9"
-ContinuumArrays = "0.12"
-FillArrays = "0.13, 1.0"
+BlockBandedMatrices = "0.12"
+ClassicalOrthogonalPolynomials = "0.11"
+ContinuumArrays = "0.14"
+FillArrays = "1.0"
 InfiniteArrays = "0.12.6"
 InfiniteLinearAlgebra = "0.6.16"
-LazyArrays = "0.22.9, 1"
-LazyBandedMatrices = "0.8.7"
-QuasiArrays = "0.9"
-julia = "1.7"
+LazyArrays = "1.0"
+LazyBandedMatrices = "0.8.13"
+MatrixFactorizations = "2.0"
+QuasiArrays = "0.11"
+julia = "1.9"
 
 [extras]
+Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "StaticArrays", "ForwardDiff"]
+test = ["Base64", "ForwardDiff", "Random", "StaticArrays", "Test"]
