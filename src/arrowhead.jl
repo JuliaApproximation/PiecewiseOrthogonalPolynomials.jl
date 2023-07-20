@@ -21,6 +21,8 @@ ArrowheadMatrix{T}(A, B, C, D) where T = ArrowheadMatrix{T, typeof(A), typeof(B)
 const ArrowheadMatrices = Union{ArrowheadMatrix,Symmetric{<:Any,<:ArrowheadMatrix},Hermitian{<:Any,<:ArrowheadMatrix},
                                 UpperOrLowerTriangular{<:Any,<:ArrowheadMatrix}}
 
+                                
+
 subblockbandwidths(A::ArrowheadMatrices) = (1,1)
 
 function blockbandwidths(A::ArrowheadMatrix)
@@ -36,6 +38,10 @@ function axes(L::ArrowheadMatrix)
 end
 
 copy(A::ArrowheadMatrix) = ArrowheadMatrix(copy(A.A), map(copy, A.B), map(copy, A.C), map(copy, A.D))
+
+for adj in (:adjoint, :transpose)
+    @eval $adj(A::ArrowheadMatrix) = ArrowheadMatrix($adj(A.A), map($adj, A.C), map($adj, A.B), map($adj, A.D))
+end
 
 function getindex(L::ArrowheadMatrix{T}, Kk::BlockIndex{1}, Jj::BlockIndex{1})::T where T
     K,k = block(Kk),blockindex(Kk)
@@ -92,10 +98,17 @@ end
 
 struct ArrowheadLayout <: AbstractBandedBlockBandedLayout end
 struct LazyArrowheadLayout <: AbstractLazyBandedBlockBandedLayout end
-ArrowheadLayouts = Union{ArrowheadLayout,LazyArrowheadLayout,SymmetricLayout{ArrowheadLayout},SymmetricLayout{LazyArrowheadLayout}}
+ArrowheadLayouts = Union{ArrowheadLayout,LazyArrowheadLayout,
+                    SymmetricLayout{ArrowheadLayout},SymmetricLayout{LazyArrowheadLayout},
+                    HermitianLayout{ArrowheadLayout},HermitianLayout{LazyArrowheadLayout},
+                    TriangularLayout{'U', 'N', ArrowheadLayout}, TriangularLayout{'L', 'N', ArrowheadLayout},
+                    TriangularLayout{'U', 'U', ArrowheadLayout}, TriangularLayout{'L', 'U', ArrowheadLayout},
+                    TriangularLayout{'U', 'N', LazyArrowheadLayout}, TriangularLayout{'L', 'N', LazyArrowheadLayout},
+                    TriangularLayout{'U', 'U', LazyArrowheadLayout}, TriangularLayout{'L', 'U', LazyArrowheadLayout}}
 arrowheadlayout(_) = ArrowheadLayout()
 arrowheadlayout(::BandedLazyLayouts) = LazyArrowheadLayout()
 symmetriclayout(lay::ArrowheadLayouts) = SymmetricLayout{typeof(lay)}()
+
 MemoryLayout(::Type{<:ArrowheadMatrix{<:Any,<:Any,<:Any,<:Any,<:AbstractVector{D}}}) where D = arrowheadlayout(MemoryLayout(D))
 
 sublayout(::ArrowheadLayouts,
@@ -127,21 +140,26 @@ function getproperty(F::Symmetric{<:Any,<:ArrowheadMatrix}, d::Symbol)
 end
 
 
+
+
 function layout_replace_in_print_matrix(::ArrowheadLayouts, A, k, j, s)
     bi = findblockindex.(axes(A), (k,j))
     K,J = block.(bi)
     k,j = blockindex.(bi)
-    l,u = blockbandwidths(A)
     K == J == Block(1) && return replace_in_print_matrix(A.A, k, j, s)
     if K == Block(1)
         return Int(J)-1 ≤ length(A.B) ? replace_in_print_matrix(A.B[Int(J)-1], k, j, s) : Base.replace_with_centered_mark(s)
     end
     if J == Block(1)
-        return Int(K)-1 ≤ length(A.C) ? replace_in_print_matrix(A.C[Int(K)-1], k, j, s) : Base.replace_with_centered_mark(s)
+        return Int(K)-1 ≤ length(A.C) ? replace_in_print_matrix(A.C[Int(K)-1], k, j, s) : Base.replace_with_centered_mark(s)
     end
     k ≠ j && return Base.replace_with_centered_mark(s)
     return replace_in_print_matrix(A.D[k], Int(K)-1, Int(J)-1, s)
 end
+
+###
+# Cholesky
+####
 
 function reversecholcopy(S::Symmetric{<:Any,<:ArrowheadMatrix})
     T = LinearAlgebra.choltype(S)
@@ -211,8 +229,116 @@ tupleop(::typeof(-), A::Tuple{}, B::Tuple) = -B
 tupleop(op, A::Tuple, B::Tuple) = (op(first(A), first(B)), tupleop(op, tail(A), tail(B))...)
 
 
+###
+# Operations
+###
+
 
 for op in (:+, :-)
     @eval $op(A::ArrowheadMatrix, B::ArrowheadMatrix) = ArrowheadMatrix($op(A.A, B.A), tupleop($op, A.B, B.B), tupleop($op, A.C, B.C), $op(A.D, B.D))
 end
 -(A::ArrowheadMatrix) = ArrowheadMatrix(-A.A, map(-, A.B), map(-, A.C), -A.D)
+
+###
+# Triangular
+###
+
+
+
+for (UNIT, Tri) in (('U',UnitUpperTriangular), ('N', UpperTriangular))
+    @eval @inline function materialize!(M::MatLdivVec{<:TriangularLayout{'U',$UNIT,ArrowheadLayout},
+                                        <:AbstractStridedLayout})
+        U,dest = M.A,M.B
+        T = eltype(dest)
+
+        P = triangulardata(U)
+
+
+
+        ξ,n = size(P.A)
+        A,B,D = P.A,P.B,P.D
+        m = length(D)
+
+        for k = 1:length(D)
+            ArrayLayouts.ldiv!($Tri(D[k]), view(dest, n+k:m:length(dest)))
+        end
+
+        N = blocksize(P,1)
+
+        # impose block structure
+        b = PseudoBlockArray(dest, (axes(P,1),))
+        b̃_1 = view(b, Block(1))
+
+        for K = 1:min(N-1,length(B))
+            muladd!(-one(T), B[K], view(b, Block(K+1)), one(T), b̃_1)
+        end
+
+        ArrayLayouts.ldiv!($Tri(A), b̃_1)
+
+        dest
+    end
+end
+for (UNIT, Tri) in (('U',UnitLowerTriangular), ('N', LowerTriangular))
+    @eval @inline function materialize!(M::MatLdivVec{<:TriangularLayout{'L',$UNIT,ArrowheadLayout},
+            <:AbstractStridedLayout})
+        U,dest = M.A,M.B
+        T = eltype(dest)
+
+        P = triangulardata(U)
+        ξ,n = size(P.A)
+        A,C,D = P.A,P.C,P.D
+        m = length(D)
+
+        # impose block structure
+        b = PseudoBlockArray(dest, (axes(P,1),))
+        b̃_1 = view(b, Block(1))
+        ArrayLayouts.ldiv!($Tri(A), b̃_1)
+
+        N = blocksize(P,1)
+        for K = 1:min(N-1,length(C))
+            muladd!(-one(T), C[K], b̃_1, one(T), view(b, Block(K+1)))
+        end
+
+
+        for k = 1:length(D)
+            ArrayLayouts.ldiv!($Tri(D[k]), view(dest, n+k:m:length(dest)))
+        end
+
+        dest
+    end
+end
+
+
+for Tri in (:UpperTriangular, :UnitUpperTriangular)
+    @eval function getproperty(F::$Tri{<:Any,<:ArrowheadMatrix}, d::Symbol)
+        P = getfield(F, :data)
+        if d == :A
+            return $Tri(P.A)
+        elseif d == :B
+            return P.B
+        elseif d == :C
+            ()
+        elseif d == :D
+            $Tri.(P.D)
+        else
+            getfield(F, d)
+        end
+    end
+end
+
+for Tri in (:LowerTriangular, :UnitLowerTriangular)
+    @eval function getproperty(F::$Tri{<:Any,<:ArrowheadMatrix}, d::Symbol)
+        P = getfield(F, :data)
+        if d == :A
+            return $Tri(P.A)
+        elseif d == :B
+            return ()
+        elseif d == :C
+            P.C
+        elseif d == :D
+            $Tri.(P.D)
+        else
+            getfield(F, d)
+        end
+    end
+end

@@ -7,11 +7,17 @@ import Base: oneto, OneTo
 
 @testset "ArrowheadMatrix" begin
     @testset "UpperTriangular" begin
-        n = 3; p = 5;
+        n = 4; p = 5;
         A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)), 
                                 [BandedMatrix((0 => randn(n-1), -1 => randn(n-1)), (n,n-1)) for _=1:2],
-                                BandedMatrix{Float64, Matrix{Float64}, OneTo{Int}}[],
-                            fill(BandedMatrix((0 => randn(p) .+ 10, 2 => randn(p-2)), (p, p)), n-1))
+                                [BandedMatrix((0 => randn(n), 1 => randn(n-1)), (n-1,n)) for _=1:2],
+                            fill(BandedMatrix((0 => randn(p) .+ 10, 2 => randn(p-2), -1=> randn(p-1)), (p, p)), n-1))
+
+        c = randn(size(A,1))
+        for T in (UpperTriangular(A), UnitUpperTriangular(A), LowerTriangular(A), UnitLowerTriangular(A),
+                  UpperTriangular(A)')
+            @test T \ c ≈ Matrix(T) \ c
+        end
     end
 
     @testset "reversecholesky" begin
@@ -59,7 +65,11 @@ import Base: oneto, OneTo
 
         KR = Block.(oneto(100))
         @time F = reversecholesky(Symmetric(parent(-Δ+M)[KR,KR]));
-        c = F \ (M[KR,KR] * transform(C, exp)[KR]);
+
+        x = M[KR,KR] * transform(C, exp)[KR]
+        @time c = F \ x;
+
+        @test_broken c isa PseudoBlockArray # TODO: overload copy_similar in BlockArrays.jl
 
         @test (C[:,KR] * c)[0.1] ≈ 1.1952730862177243
     end
