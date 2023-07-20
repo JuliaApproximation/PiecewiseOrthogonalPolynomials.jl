@@ -20,6 +20,8 @@ MatrixFactorizations = "a3b82374-2e81-5b9e-98ce-41277c0e4c87"
 QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 
 [compat]
+ArrayLayouts = "1.0.12"
+BandedMatrices = "0.17.30"
 BlockArrays = "0.16.25"
 BlockBandedMatrices = "0.12"
 ClassicalOrthogonalPolynomials = "0.11"
