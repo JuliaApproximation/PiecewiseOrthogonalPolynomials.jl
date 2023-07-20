@@ -6,6 +6,28 @@ import Base: oneto, OneTo
 
 
 @testset "ArrowheadMatrix" begin
+    @testset "Algebra" begin
+        n = 4; p = 5;
+        A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)), 
+                                ntuple(_ -> BandedMatrix((0 => randn(n-1), -1 => randn(n-1)), (n,n-1)), 2),
+                                ntuple(_ -> BandedMatrix((0 => randn(n), 1 => randn(n-1)), (n-1,n)), 3),
+                            fill(BandedMatrix((0 => randn(p) .+ 10, 2 => randn(p-2), -1=> randn(p-1)), (p, p)), n-1))
+
+        @test 2A isa ArrowheadMatrix
+        @test A*2 isa ArrowheadMatrix
+        @test 2\A isa ArrowheadMatrix
+        @test A/2 isa ArrowheadMatrix
+        @test A+A isa ArrowheadMatrix
+        @test A-A isa ArrowheadMatrix
+
+        @test 2A == A*2 == A+A == 2Matrix(A)
+        @test all(iszero,A-A)
+        @test A + A' == A' + A == Matrix(A) + Matrix(A)'
+        @test A - A' == Matrix(A) - Matrix(A)'
+        @test A' - A == Matrix(A)' - Matrix(A)
+        @test A/2 == 2\A == Matrix(A)/2
+    end
+
     @testset "UpperTriangular" begin
         n = 4; p = 5;
         A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)), 
@@ -17,6 +39,18 @@ import Base: oneto, OneTo
         for T in (UpperTriangular(A), UnitUpperTriangular(A), LowerTriangular(A), UnitLowerTriangular(A),
                   UpperTriangular(A)')
             @test T \ c ≈ Matrix(T) \ c
+        end
+        for Typ in (UpperTriangular, UnitUpperTriangular)
+            @test Typ(A).A == Typ(A.A)
+            @test Typ(A).B == A.B
+            @test isempty(Typ(A).C)
+            @test Typ(A).D == map(Typ,A.D)
+        end
+        for Typ in (LowerTriangular, UnitLowerTriangular)
+            @test Typ(A).A == Typ(A.A)
+            @test isempty(Typ(A).B)
+            @test Typ(A).C == A.C
+            @test Typ(A).D == map(Typ,A.D)
         end
     end
 

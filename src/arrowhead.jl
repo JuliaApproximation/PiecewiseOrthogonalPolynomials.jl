@@ -222,10 +222,12 @@ function MatrixFactorizations._reverse_chol!(A::ArrowheadMatrix, ::Type{UpperTri
     return UpperTriangular(A), convert(BlasInt, 0)
 end
 
-tupleop(::Tuple{}, ::Tuple{}) = ()
-tupleop(A::Tuple, B::Tuple{}) = A
+tupleop(::typeof(+), ::Tuple{}, ::Tuple{}) = ()
+tupleop(::typeof(-), ::Tuple{}, ::Tuple{}) = ()
+tupleop(::typeof(+), A::Tuple, B::Tuple{}) = A
+tupleop(::typeof(-), A::Tuple, B::Tuple{}) = A
 tupleop(::typeof(+), A::Tuple{}, B::Tuple) = B
-tupleop(::typeof(-), A::Tuple{}, B::Tuple) = -B
+tupleop(::typeof(-), A::Tuple{}, B::Tuple) = map(-,B)
 tupleop(op, A::Tuple, B::Tuple) = (op(first(A), first(B)), tupleop(op, tail(A), tail(B))...)
 
 
@@ -238,6 +240,14 @@ for op in (:+, :-)
     @eval $op(A::ArrowheadMatrix, B::ArrowheadMatrix) = ArrowheadMatrix($op(A.A, B.A), tupleop($op, A.B, B.B), tupleop($op, A.C, B.C), $op(A.D, B.D))
 end
 -(A::ArrowheadMatrix) = ArrowheadMatrix(-A.A, map(-, A.B), map(-, A.C), -A.D)
+
+for op in (:*, :\)
+    @eval $op(c::Number, A::ArrowheadMatrix) = ArrowheadMatrix($op(c, A.A), broadcast($op, c, A.B), broadcast($op, c, A.C), broadcast($op, c, A.D))
+end
+
+for op in (:*, :/)
+    @eval $op(A::ArrowheadMatrix, c::Number) = ArrowheadMatrix($op(A.A, c), broadcast($op, A.B, c), broadcast($op, A.C, c), broadcast($op, A.D, c))
+end
 
 ###
 # Triangular
