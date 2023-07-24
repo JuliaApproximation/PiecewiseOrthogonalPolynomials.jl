@@ -84,3 +84,8 @@ end
     C = ContinuousPolynomial{1}(A)
     (A\C) * (C'B)
 end
+
+function diff(Q::DirichletPolynomial{T}; dims=1) where T
+    C = ContinuousPolynomial{1}(Q)
+    diff(C; dims=dims) * (C \ Q)
+end
