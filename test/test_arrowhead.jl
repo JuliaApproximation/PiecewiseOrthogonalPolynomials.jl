@@ -107,4 +107,15 @@ import Base: oneto, OneTo
 
         @test (C[:,KR] * c)[0.1] ≈ 1.1952730862177243
     end
+
+    @testset "Dirichlet" begin
+        n = 5; p = 5;
+        A = ArrowheadMatrix(BandedMatrix(0 => randn(n-2) .+ 10, 1 => randn(n-3), -1 => randn(n-3)), 
+                                [BandedMatrix((0 => randn(n-2), 1 => randn(n-2)), (n-2,n-1)) for _=1:2],
+                                BandedMatrix{Float64, Matrix{Float64}, OneTo{Int}}[],
+                            fill(BandedMatrix((0 => randn(p) .+ 10, 2 => randn(p-2)), (p, p)), n-1))
+        U = reversecholesky(Symmetric(A)).U
+        @test U ≈ reversecholesky(Matrix(Symmetric(A))).U
+        @test U*U' ≈ Symmetric(A)
+    end
 end

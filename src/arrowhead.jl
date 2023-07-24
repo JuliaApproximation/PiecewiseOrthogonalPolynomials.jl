@@ -69,20 +69,20 @@ function ArrowheadMatrix(A, B, C, D)
 
     λ,μ = bandwidths(A)
 
-    @assert 0 ≤ λ ≤ 1
-    @assert 0 ≤ μ ≤ 1
+    @assert -1 ≤ λ ≤ 1
+    @assert -1 ≤ μ ≤ 1
 
 
     for op in B
         @assert size(op) == (ξ,m)
         λ,μ = bandwidths(op)
         @assert 0 ≤ λ ≤ 1
-        @assert iszero(μ)
+        @assert 0 ≤ μ ≤ 1
     end
     for op in C
         @assert size(op) == (m,n)
         λ,μ = bandwidths(op)
-        @assert iszero(λ)
+        @assert 0 ≤ λ ≤ 1
         @assert 0 ≤ μ ≤ 1
     end
 
@@ -169,14 +169,36 @@ function reversecholcopy(S::Symmetric{<:Any,<:ArrowheadMatrix})
     LinearAlgebra.copymutable_oftype.(A.D, T)))
 end
 
+
+
 function MatrixFactorizations._reverse_chol!(A::ArrowheadMatrix, ::Type{UpperTriangular})
 
     for B in A.D
         reversecholesky!(Symmetric(B))
     end
 
+    if bandwidths(A.B[1]) == (1,0)
+        _reverse_chol_lower_B!(A, UpperTriangular)
+    else
+        _reverse_chol_upper_B!(A, UpperTriangular)
+    end
+
+    reversecholesky!(Symmetric(A.A))
+
+    return UpperTriangular(A), convert(BlasInt, 0)
+end
+
+
+# This is the case that the off-diagonal Bs are lower triangular
+# which is the case with Neumann conditions
+function _reverse_chol_lower_B!(A, ::Type{UpperTriangular})
+    for B in A.B
+        @assert bandwidths(B) == (1,0)
+    end
+
     ξ,n = size(A.A)
     m = length(A.D)
+
     @assert ξ == n == m+1
     # for each block interacting with B, and each entry of each
     # block
@@ -216,11 +238,51 @@ function MatrixFactorizations._reverse_chol!(A::ArrowheadMatrix, ::Type{UpperTri
             end
         end
     end
-
-    reversecholesky!(Symmetric(A.A))
-
-    return UpperTriangular(A), convert(BlasInt, 0)
 end
+
+function _reverse_chol_upper_B!(A, ::Type{UpperTriangular})
+    for B in A.B
+        @assert bandwidths(B) == (0,1)
+    end
+
+    ξ,n = size(A.A)
+    m = length(A.D)
+
+    @assert ξ == n == m-1
+    # for each block interacting with B, and each entry of each
+    # block
+    for b = length(A.B):-1:1, k = m:-1:1
+        for b̃ = b+1:length(A.B) # j loop
+            Akj = A.D[k][b,b̃]'
+
+            if !iszero(Akj) # often we have zeros so this avoids unnecessary computation
+                @simd for i = max(1,k-1):min(k,n)
+                    A.B[b][i,k] -= A.B[b̃][i,k]*Akj
+                end
+            end
+        end
+
+        AkkInv = inv(copy(A.D[k][b,b]'))
+        for i = max(1,k-1):min(k,n)
+            A.B[b][i,k] *= AkkInv'
+        end
+    end
+
+    #(1,1) block update now
+    # k == n, only contribution is from column n+1
+    for b̃ = 1:length(A.B) # j loop
+        for k = n:-1:1
+            Akj = A.B[b̃][k,k+1]
+            A.A[k,k] -= Akj^2
+
+            Akj = A.B[b̃][k,k]
+            for i = max(1,k-1):k
+                A.A[i,k] -= Akj * A.B[b̃][i,k]
+            end
+        end
+    end
+end
+
 
 tupleop(::typeof(+), ::Tuple{}, ::Tuple{}) = ()
 tupleop(::typeof(-), ::Tuple{}, ::Tuple{}) = ()

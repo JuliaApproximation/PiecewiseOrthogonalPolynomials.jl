@@ -156,7 +156,7 @@ function grammatrix(C::ContinuousPolynomial{1, T, <:AbstractRange}) where T
 
     Symmetric(ArrowheadMatrix(a11, (a21, a31), (),
                 Fill(_BandedMatrix(Vcat((-h*a/2)',
-                Zeros(1,∞),
+                Zeros{T}(1,∞),
                 (h*b/2)'), ∞, 0, 2), N)))
 end
 

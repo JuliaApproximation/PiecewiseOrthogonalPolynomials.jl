@@ -13,7 +13,7 @@ import Base: axes, getindex, +, -, *, /, ==, \, OneTo, oneto, replace_in_print_m
 import LinearAlgebra: BlasInt
 import MatrixFactorizations: reversecholcopy
 
-export PiecewisePolynomial, ContinuousPolynomial, Derivative, Block, weaklaplacian, grammatrix
+export PiecewisePolynomial, ContinuousPolynomial, DirichletPolynomial, Derivative, Block, weaklaplacian, grammatrix
 
 include("arrowhead.jl")
 include("piecewisepolynomial.jl")
