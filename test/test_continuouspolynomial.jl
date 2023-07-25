@@ -1,4 +1,7 @@
+using PiecewiseOrthogonalPolynomials, StaticArrays, InfiniteArrays, Test
+
 @testset "transform" begin
+    r = range(-1, 1; length=10)
     P = ContinuousPolynomial{0}(r)
     @test_broken grid(P[:,Block.(OneTo(3))]) == grid(PiecewisePolynomial(P)[:,Block.(OneTo(3))]) == grid(ContinuousPolynomial{1}(r)[:,Block.(OneTo(3))])
     @test grid(P[:,1:5]) == grid(PiecewisePolynomial(P)[:,1:5]) == grid(ContinuousPolynomial{1}(r)[:,1:5])

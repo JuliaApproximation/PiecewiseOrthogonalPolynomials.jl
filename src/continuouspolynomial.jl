@@ -56,7 +56,7 @@ function adaptivetransform_ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiVe
 
     c = C₀\f # Piecewise Legendre transform
     c̃ = paddeddata(c)
-    N = div(length(c̃), M, RoundUp) # degree
+    N = max(2,div(length(c̃), M, RoundUp)) # degree
     P = Legendre{T}()
     W = Weighted(Jacobi{T}(1,1))
     
