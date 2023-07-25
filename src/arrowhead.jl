@@ -76,14 +76,14 @@ function ArrowheadMatrix(A, B, C, D)
     for op in B
         @assert size(op) == (ξ,m)
         λ,μ = bandwidths(op)
-        @assert 0 ≤ λ ≤ 1
-        @assert 0 ≤ μ ≤ 1
+        @assert -1 ≤ λ ≤ 1
+        @assert -1 ≤ μ ≤ 1
     end
     for op in C
         @assert size(op) == (m,n)
         λ,μ = bandwidths(op)
-        @assert 0 ≤ λ ≤ 1
-        @assert 0 ≤ μ ≤ 1
+        @assert -1 ≤ λ ≤ 1
+        @assert -1 ≤ μ ≤ 1
     end
 
     l,u = bandwidths(D[1])
@@ -177,10 +177,12 @@ function MatrixFactorizations._reverse_chol!(A::ArrowheadMatrix, ::Type{UpperTri
         reversecholesky!(Symmetric(B))
     end
 
-    if bandwidths(A.B[1]) == (1,0)
-        _reverse_chol_lower_B!(A, UpperTriangular)
-    else
-        _reverse_chol_upper_B!(A, UpperTriangular)
+    if !isempty(A.B)
+        if bandwidths(A.B[1]) == (1,0)
+            _reverse_chol_lower_B!(A, UpperTriangular)
+        else
+            _reverse_chol_upper_B!(A, UpperTriangular)
+        end
     end
 
     reversecholesky!(Symmetric(A.A))
