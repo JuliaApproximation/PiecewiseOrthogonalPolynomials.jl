@@ -28,6 +28,23 @@ import Base: oneto, OneTo
         @test A/2 == 2\A == Matrix(A)/2
     end
 
+    @testset "mul" begin
+        n = 4; p = 5;
+        A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)), 
+                                ntuple(_ -> BandedMatrix((0 => randn(n-1), -1 => randn(n-1)), (n,n-1)), 2),
+                                ntuple(_ -> BandedMatrix((0 => randn(n), 1 => randn(n-1)), (n-1,n)), 3),
+                            fill(BandedMatrix((0 => randn(p) .+ 10, 2 => randn(p-2), -1=> randn(p-1)), (p, p)), n-1))
+
+        x = randn(size(A,1))
+        X = randn(size(A))
+        X̃ = randn(size(A,1),5)
+        @test A*x ≈ Matrix(A)*x
+        @test A'*x ≈ Matrix(A)'*x
+        @test A*X ≈ Matrix(A)*X
+        @test A*X̃ ≈ Matrix(A)*X̃
+        @test X*A ≈ X*Matrix(A)
+    end
+
     @testset "UpperTriangular" begin
         n = 4; p = 5;
         A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)), 
@@ -39,6 +56,7 @@ import Base: oneto, OneTo
         for T in (UpperTriangular(A), UnitUpperTriangular(A), LowerTriangular(A), UnitLowerTriangular(A),
                   UpperTriangular(A)')
             @test T \ c ≈ Matrix(T) \ c
+            @test c' / T ≈ c' / Matrix(T)
         end
         for Typ in (UpperTriangular, UnitUpperTriangular)
             @test Typ(A).A == Typ(A.A)

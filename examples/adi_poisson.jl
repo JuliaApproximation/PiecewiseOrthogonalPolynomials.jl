@@ -42,9 +42,9 @@ function ADI(A, B, C, F, a, b, c, d, tol=1e-15)
 
     for j = 1:J
         X = ((A - p[j]*C)*X - F)/reversecholesky(Symmetric(p[j]*C - B))
-        X = (A - q[j]*C)\(F - X*(B - q[j]*C))
+        X = reversecholesky(Symmetric(A - q[j]*C))\(F - X*(B - q[j]*C))
     end
-    
+
     X
 end
 
@@ -68,6 +68,7 @@ end
 r = range(-1, 1, 5)
 K = length(r)-1
 
+P = ContinuousPolynomial{0}(r)
 Q = DirichletPolynomial(r)
 Δ = -weaklaplacian(Q)
 M = grammatrix(Q)
@@ -93,14 +94,14 @@ norm(splat(f).(z) - Fa)
 # weak form for RHS
 F = (Q'*P)[KR, KR]*fp*((Q'*P)[KR, KR])'  # RHS <f,v>
 
-A, B, a, b, c, d = Mₙ, -Mₙ, e1s, e2s, -e2s, -e1s    
-X = ADI(A, B, Δₙ, F, a, b, c, d)
+A, B, a, b, c, d = Mₙ, -Mₙ, e1s, e2s, -e2s, -e1s
+@time X = ADI(A, B, Δₙ, F, a, b, c, d)
 
 # X = UΔ
-U = (L' \ (L \ X'))'
+Y = (U' \ (U \ X'))'
 
 u_exact = z -> ((x,y)= z; sin.(π*x)*sin.(π*y)*y^2)
-Ua = C[first.(z)[:,1], Block.(1:p)] * U  * C[first.(z)[:,1], Block.(1:p)]'
+Ua = Q[first.(z)[:,1], Block.(1:p)] * Y  * Q[first.(z)[:,1], Block.(1:p)]'
 
 norm(u_exact.(z) - Ua) # ℓ^∞ error.
 
@@ -130,7 +131,7 @@ F = (C'*P)[Block.(1:p), Block.(1:p)]*fp*((C'*P)[Block.(1:p), Block.(1:p)])'  # R
 F[1, :] .= 0; F[K+1, :] .= 0; F[:, 1] .= 0; F[:, K+1] .= 0  # Dirichlet bcs
 
 tol = 1e-15 # ADI tolerance
-A, B, a, b, c, d = pΔ, -pΔ, e1s, e2s, -e2s, -e1s    
+A, B, a, b, c, d = pΔ, -pΔ, e1s, e2s, -e2s, -e1s
 X = ADI(A, B, pM, F, a, b, c, d, tol)
 
 # X = UM
