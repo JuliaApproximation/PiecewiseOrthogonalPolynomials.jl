@@ -73,7 +73,7 @@ Q = DirichletPolynomial(r)
 Δ = -weaklaplacian(Q)
 M = grammatrix(Q)
 
-p = 40 # truncation degree on each cell
+p = 160 # truncation degree on each cell
 KR = Block.(oneto(p))
 Δₙ = Δ[KR,KR]
 Mₙ = M[KR,KR]
