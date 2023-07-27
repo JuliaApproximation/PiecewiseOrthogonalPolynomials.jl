@@ -25,9 +25,16 @@ function ADI_shifts(J, a, b, c, d, tol=1e-15)
     α = -1 + 2γ + 2√Complex(γ^2 - γ)
     α = Real(α)
 
-    K = ellipticK(1-1/big(α)^2)
-    # K = Elliptic.K(1-1/α^2)
-    dn = [Elliptic.Jacobi.dn((2*j + 1)*K/(2J), 1-1/α^2) for j = 0:J-1]
+    # K = ellipticK(1-1/big(α)^2)
+    if α < 1e7
+        K = Elliptic.K(1-1/α^2)
+        dn = Elliptic.Jacobi.dn.((2*(0:J-1) + 1)*K/(2J), 1-1/α^2)
+    else
+        K = 2log(2)+log(α) + (-1+2log(2)+log(α))/α^2/4
+        m1 = 1/α^2
+        u = (1/2:J-1/2) * K/J
+        dn = @. sech(u) + m1/4 * (sinh(u)cosh(u) + u) * tanh(u) * sech(u)
+    end
 
     [mobius(-α*i, a, b, c, d, α) for i = dn], [mobius(α*i, a, b, c, d, α) for i = dn]
 end
@@ -76,7 +83,7 @@ Q = DirichletPolynomial(r)
 Δ = -weaklaplacian(Q)
 M = grammatrix(Q)
 
-p = 40 # truncation degree on each cell
+p = 300 # truncation degree on each cell
 KR = Block.(oneto(p))
 Δₙ = Δ[KR,KR]
 Mₙ = M[KR,KR]

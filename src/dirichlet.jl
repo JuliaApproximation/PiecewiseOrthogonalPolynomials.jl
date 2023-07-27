@@ -5,7 +5,6 @@ end
 DirichletPolynomial{T}(pts::P) where {T,P} = DirichletPolynomial{T,P}(pts)
 DirichletPolynomial(pts) = DirichletPolynomial{Float64}(pts)
 DirichletPolynomial{T}(P::DirichletPolynomial) where {T} = DirichletPolynomial{T}(P.points)
-DirichletPolynomial(P::DirichletPolynomial) = DirichletPolynomial{eltype(P)}(P)
 
 ContinuousPolynomial{order}(P::DirichletPolynomial{T}) where {order, T} = ContinuousPolynomial{order}(P.points)
 PiecewisePolynomial(P::DirichletPolynomial{T}) where {T} = PiecewisePolynomial(ContinuousPolynomial{0}(P))

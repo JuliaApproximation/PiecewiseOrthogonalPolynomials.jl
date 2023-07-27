@@ -11,6 +11,10 @@ using PiecewiseOrthogonalPolynomials: ArrowheadMatrix
     @test P ≠ Q
     @test C ≠ Q
 
+    @test PiecewisePolynomial(Q) == P
+    @test PiecewisePolynomial(Q) ≠ Q
+    @test Q ≠ PiecewisePolynomial(Q)
+
 
     f = expand(Q, x -> (1-x^2) * exp(x))
     @test f[0.1] ≈ (1-0.1^2) * exp(0.1)
