@@ -69,21 +69,21 @@ function ArrowheadMatrix(A, B, C, D)
 
     λ,μ = bandwidths(A)
 
-    @assert 0 ≤ λ ≤ 1
-    @assert 0 ≤ μ ≤ 1
+    @assert -1 ≤ λ ≤ 1
+    @assert -1 ≤ μ ≤ 1
 
 
     for op in B
         @assert size(op) == (ξ,m)
         λ,μ = bandwidths(op)
-        @assert 0 ≤ λ ≤ 1
-        @assert iszero(μ)
+        @assert -1 ≤ λ ≤ 1
+        @assert -1 ≤ μ ≤ 1
     end
     for op in C
         @assert size(op) == (m,n)
         λ,μ = bandwidths(op)
-        @assert iszero(λ)
-        @assert 0 ≤ μ ≤ 1
+        @assert -1 ≤ λ ≤ 1
+        @assert -1 ≤ μ ≤ 1
     end
 
     l,u = bandwidths(D[1])
@@ -157,6 +157,81 @@ function layout_replace_in_print_matrix(::ArrowheadLayouts, A, k, j, s)
     return replace_in_print_matrix(A.D[k], Int(K)-1, Int(J)-1, s)
 end
 
+####
+# Mul
+####
+
+function materialize!(M::MatMulVecAdd{<:ArrowheadLayouts,<:AbstractStridedLayout,<:AbstractStridedLayout})
+    α, A, x_in, β, y_in = M.α, M.A, M.B, M.β, M.C
+    x = PseudoBlockArray(x_in, (axes(A,2), ))
+    y = PseudoBlockArray(y_in, (axes(A,1),))
+    m,n = size(A.A)
+
+    _fill_lmul!(β, y)
+
+    mul!(view(y, Block(1)), A.A, view(x, Block(1)), α, one(α))
+    for k = 1:length(A.B)
+        mul!(view(y, Block(1)), A.B[k], view(x, Block(k+1)), α, one(α))
+    end
+    for k = 1:length(A.C)
+        mul!(view(y, Block(k+1)), A.C[k], view(x, Block(1)), α, one(α))
+    end
+
+    d = length(A.D)
+    for k = 1:d
+        mul!(view(y, m+k:d:size(y,1)), A.D[k], view(x, n+k:d:size(x,1)), α, one(α))
+    end
+    y_in
+end
+
+function materialize!(M::MatMulMatAdd{<:ArrowheadLayouts,<:AbstractColumnMajor,<:AbstractColumnMajor})
+    α, A, X_in, β, Y_in = M.α, M.A, M.B, M.β, M.C
+    X = PseudoBlockArray(X_in, (axes(A,2), axes(X_in,2)))
+    Y = PseudoBlockArray(Y_in, (axes(A,1), axes(X_in,2)))
+    m,n = size(A.A)
+
+    _fill_lmul!(β, Y)
+    for J = blockaxes(X,2)
+        mul!(view(Y, Block(1), J), A.A, view(X, Block(1), J), α, one(α))
+        for k = 1:length(A.B)
+            mul!(view(Y, Block(1), J), A.B[k], view(X, Block(k+1), J), α, one(α))
+        end
+        for k = 1:length(A.C)
+            mul!(view(Y, Block(k+1), J), A.C[k], view(X, Block(1), J), α, one(α))
+        end
+    end
+    d = length(A.D)
+    for k = 1:d
+        mul!(view(Y, m+k:d:size(Y,1), :), A.D[k], view(X, n+k:d:size(Y,1), :), α, one(α))
+    end
+    Y_in
+end
+
+function materialize!(M::MatMulMatAdd{<:AbstractColumnMajor,<:ArrowheadLayouts,<:AbstractColumnMajor})
+    α, X_in, A, β, Y_in = M.α, M.A, M.B, M.β, M.C
+    X = PseudoBlockArray(X_in, (axes(X_in,1), axes(A,1)))
+    Y = PseudoBlockArray(Y_in, (axes(Y_in,1), axes(A,2)))
+    m,n = size(A.A)
+
+    _fill_lmul!(β, Y)
+    for K = blockaxes(X,1)
+        mul!(view(Y, K, Block(1)), view(X, K, Block(1)), A.A, α, one(α))
+        for k = 1:length(A.C)
+            mul!(view(Y, K, Block(1)), view(X, K, Block(k+1)), A.C[k], α, one(α))
+        end
+        for k = 1:length(A.B)
+            mul!(view(Y, K, Block(k+1)), view(X, K, Block(1)), A.B[k], α, one(α))
+        end
+    end
+    d = length(A.D)
+    for k = 1:d
+        mul!(view(Y, :, n+k:d:size(Y,2)), view(X, :, m+k:d:size(Y,2)), A.D[k], α, one(α))
+    end
+    Y_in
+end
+
+
+
 ###
 # Cholesky
 ####
@@ -169,14 +244,38 @@ function reversecholcopy(S::Symmetric{<:Any,<:ArrowheadMatrix})
     LinearAlgebra.copymutable_oftype.(A.D, T)))
 end
 
+
+
 function MatrixFactorizations._reverse_chol!(A::ArrowheadMatrix, ::Type{UpperTriangular})
 
     for B in A.D
         reversecholesky!(Symmetric(B))
     end
 
+    if !isempty(A.B)
+        if bandwidths(A.B[1]) == (1,0)
+            _reverse_chol_lower_B!(A, UpperTriangular)
+        else
+            _reverse_chol_upper_B!(A, UpperTriangular)
+        end
+    end
+
+    reversecholesky!(Symmetric(A.A))
+
+    return UpperTriangular(A), convert(BlasInt, 0)
+end
+
+
+# This is the case that the off-diagonal Bs are lower triangular
+# which is the case with Neumann conditions
+function _reverse_chol_lower_B!(A, ::Type{UpperTriangular})
+    for B in A.B
+        @assert bandwidths(B) == (1,0)
+    end
+
     ξ,n = size(A.A)
     m = length(A.D)
+
     @assert ξ == n == m+1
     # for each block interacting with B, and each entry of each
     # block
@@ -216,11 +315,53 @@ function MatrixFactorizations._reverse_chol!(A::ArrowheadMatrix, ::Type{UpperTri
             end
         end
     end
-
-    reversecholesky!(Symmetric(A.A))
-
-    return UpperTriangular(A), convert(BlasInt, 0)
 end
+
+function _reverse_chol_upper_B!(A, ::Type{UpperTriangular})
+    for B in A.B
+        @assert bandwidths(B) == (0,1)
+    end
+
+    ξ,n = size(A.A)
+    m = length(A.D)
+
+    N = blocksize(A,1)
+
+    @assert ξ == n == m-1
+    # for each block interacting with B, and each entry of each
+    # block
+    for b = min(length(A.B),N-1):-1:1, k = m:-1:1
+        for b̃ = b+1:min(length(A.B),N-1) # j loop
+            Akj = A.D[k][b,b̃]'
+
+            if !iszero(Akj) # often we have zeros so this avoids unnecessary computation
+                @simd for i = max(1,k-1):min(k,n)
+                    A.B[b][i,k] -= A.B[b̃][i,k]*Akj
+                end
+            end
+        end
+
+        AkkInv = inv(copy(A.D[k][b,b]'))
+        for i = max(1,k-1):min(k,n)
+            A.B[b][i,k] *= AkkInv'
+        end
+    end
+
+    #(1,1) block update now
+    # k == n, only contribution is from column n+1
+    for b̃ = 1:length(A.B) # j loop
+        for k = n:-1:1
+            Akj = A.B[b̃][k,k+1]
+            A.A[k,k] -= Akj^2
+
+            Akj = A.B[b̃][k,k]
+            for i = max(1,k-1):k
+                A.A[i,k] -= Akj * A.B[b̃][i,k]
+            end
+        end
+    end
+end
+
 
 tupleop(::typeof(+), ::Tuple{}, ::Tuple{}) = ()
 tupleop(::typeof(-), ::Tuple{}, ::Tuple{}) = ()
@@ -269,7 +410,7 @@ for (UNIT, Tri) in (('U',UnitUpperTriangular), ('N', UpperTriangular))
         A,B,D = P.A,P.B,P.D
         m = length(D)
 
-        for k = 1:length(D)
+        for k = 1:m
             ArrayLayouts.ldiv!($Tri(D[k]), view(dest, n+k:m:length(dest)))
         end
 

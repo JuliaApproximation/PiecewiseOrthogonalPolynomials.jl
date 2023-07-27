@@ -1,7 +1,7 @@
 module PiecewiseOrthogonalPolynomials
 using ClassicalOrthogonalPolynomials, LinearAlgebra, BlockArrays, BlockBandedMatrices, BandedMatrices, ContinuumArrays, QuasiArrays, LazyArrays, LazyBandedMatrices, FillArrays, MatrixFactorizations, ArrayLayouts
 
-import ArrayLayouts: sublayout, sub_materialize, symmetriclayout, transposelayout, SymmetricLayout, HermitianLayout, TriangularLayout, layout_getindex, materialize!, MatLdivVec, AbstractStridedLayout, triangulardata
+import ArrayLayouts: sublayout, sub_materialize, symmetriclayout, transposelayout, SymmetricLayout, HermitianLayout, TriangularLayout, layout_getindex, materialize!, MatLdivVec, AbstractStridedLayout, triangulardata, MatMulMatAdd, MatMulVecAdd, _fill_lmul!
 import BandedMatrices: _BandedMatrix
 import BlockArrays: BlockSlice, block, blockindex, blockvec
 import BlockBandedMatrices: _BandedBlockBandedMatrix, AbstractBandedBlockBandedMatrix, subblockbandwidths, blockbandwidths, AbstractBandedBlockBandedLayout, layout_replace_in_print_matrix
@@ -13,11 +13,13 @@ import Base: axes, getindex, +, -, *, /, ==, \, OneTo, oneto, replace_in_print_m
 import LinearAlgebra: BlasInt
 import MatrixFactorizations: reversecholcopy
 
-export PiecewisePolynomial, ContinuousPolynomial, Derivative, Block, weaklaplacian, grammatrix
+export PiecewisePolynomial, ContinuousPolynomial, DirichletPolynomial, Derivative, Block, weaklaplacian, grammatrix
 
+include("arrowhead.jl")
 include("piecewisepolynomial.jl")
 include("continuouspolynomial.jl")
-include("arrowhead.jl")
+include("dirichlet.jl")
+
 
 
 end # module

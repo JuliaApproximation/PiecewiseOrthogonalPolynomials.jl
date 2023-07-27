@@ -56,7 +56,7 @@ function adaptivetransform_ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiVe
 
     c = C₀\f # Piecewise Legendre transform
     c̃ = paddeddata(c)
-    N = div(length(c̃), M, RoundUp) # degree
+    N = max(2,div(length(c̃), M, RoundUp)) # degree
     P = Legendre{T}()
     W = Weighted(Jacobi{T}(1,1))
     
@@ -115,7 +115,7 @@ function \(P::ContinuousPolynomial{0, <:Any, <:AbstractRange}, C::ContinuousPoly
     @assert P.points == C.points
     v = (convert(T, 2):2:∞) ./ (3:2:∞)
     N = length(P.points)
-    L = ArrowheadMatrix(_BandedMatrix(Ones{T}(2, N)/2, oneto(N-1), 0, 1),
+    ArrowheadMatrix(_BandedMatrix(Ones{T}(2, N)/2, oneto(N-1), 0, 1),
         (_BandedMatrix(Fill(v[1], 1, N-1), oneto(N-1), 0, 0),),
         (_BandedMatrix(Vcat(Ones{T}(1, N)/2, -Ones{T}(1, N)/2), oneto(N-1), 0, 1),),
         Fill(_BandedMatrix(Hcat(v, Zeros{T}(∞), -v)', axes(v,1), 1, 1), N-1))
@@ -156,7 +156,7 @@ function grammatrix(C::ContinuousPolynomial{1, T, <:AbstractRange}) where T
 
     Symmetric(ArrowheadMatrix(a11, (a21, a31), (),
                 Fill(_BandedMatrix(Vcat((-h*a/2)',
-                Zeros(1,∞),
+                Zeros{T}(1,∞),
                 (h*b/2)'), ∞, 0, 2), N)))
 end
 
