@@ -325,11 +325,13 @@ function _reverse_chol_upper_B!(A, ::Type{UpperTriangular})
     ξ,n = size(A.A)
     m = length(A.D)
 
+    N = blocksize(A,1)
+
     @assert ξ == n == m-1
     # for each block interacting with B, and each entry of each
     # block
-    for b = length(A.B):-1:1, k = m:-1:1
-        for b̃ = b+1:length(A.B) # j loop
+    for b = min(length(A.B),N-1):-1:1, k = m:-1:1
+        for b̃ = b+1:min(length(A.B),N-1) # j loop
             Akj = A.D[k][b,b̃]'
 
             if !iszero(Akj) # often we have zeros so this avoids unnecessary computation
