@@ -1,4 +1,4 @@
-using PiecewiseOrthogonalPolynomials, MatrixFactorizations
+using PiecewiseOrthogonalPolynomials, MatrixFactorizations, HypergeometricFunctions
 using Elliptic
 using ClassicalOrthogonalPolynomials, StaticArrays, LinearAlgebra
 using Base: oneto
@@ -17,13 +17,16 @@ function mobius(z, a, b, c, d, α)
     (t₁*z + t₂)/(t₃*z + t₄)
 end
 
+ellipticK(z) = convert(eltype(α),π)/2*HypergeometricFunctions._₂F₁(one(α)/2,one(α)/2,1, z)
+
 
 function ADI_shifts(J, a, b, c, d, tol=1e-15)
     γ = (c-a)*(d-b)/((c-b)*(d-a))
     α = -1 + 2γ + 2√Complex(γ^2 - γ)
     α = Real(α)
 
-    K = Elliptic.K(1-1/α^2)
+    K = ellipticK(1-1/big(α)^2)
+    # K = Elliptic.K(1-1/α^2)
     dn = [Elliptic.Jacobi.dn((2*j + 1)*K/(2J), 1-1/α^2) for j = 0:J-1]
 
     [mobius(-α*i, a, b, c, d, α) for i = dn], [mobius(α*i, a, b, c, d, α) for i = dn]
@@ -41,8 +44,8 @@ function ADI(A, B, C, F, a, b, c, d, tol=1e-15)
     p, q = ADI_shifts(J, a, b, c, d, tol)
 
     for j = 1:J
-        X = ((A - p[j]*C)*X - F)/reversecholesky(Symmetric(p[j]*C - B))
-        X = reversecholesky(Symmetric(A - q[j]*C))\(F - X*(B - q[j]*C))
+        X = ((A/p[j] - C)*X - F/p[j])/reversecholesky(Symmetric(C - B/p[j]))
+        X = reversecholesky(Symmetric(C - A/q[j]))\(X*(B/q[j] - C) - F/q[j])
     end
 
     X
@@ -73,7 +76,7 @@ Q = DirichletPolynomial(r)
 Δ = -weaklaplacian(Q)
 M = grammatrix(Q)
 
-p = 160 # truncation degree on each cell
+p = 40 # truncation degree on each cell
 KR = Block.(oneto(p))
 Δₙ = Δ[KR,KR]
 Mₙ = M[KR,KR]
@@ -103,7 +106,7 @@ Y = (U' \ (U \ X'))'
 u_exact = z -> ((x,y)= z; sin.(π*x)*sin.(π*y)*y^2)
 Ua = Q[first.(z)[:,1], Block.(1:p)] * Y  * Q[first.(z)[:,1], Block.(1:p)]'
 
-norm(u_exact.(z) - Ua) # ℓ^∞ error.
+@test u_exact.(z) ≈ Ua # ℓ^∞ error.
 
 """
 Via (5.3) and (5.6) of Kars' thesis.
