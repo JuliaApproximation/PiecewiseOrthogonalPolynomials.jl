@@ -25,19 +25,14 @@ function repeatgrid(ax, g, pts)
     ret
 end
 
-function grid(V::SubQuasiArray{T,2,<:PiecewisePolynomial,<:Tuple{Inclusion,BlockSlice}}) where {T}
-    P = parent(V)
-    _, JR = parentindices(V)
-    N = Int(last(JR))
-    g = grid(P.basis[:, OneTo(N)])
-    repeatgrid(axes(P.basis, 1), g, P.points)
-end
-
-function grid(V::SubQuasiArray{T,N,<:PiecewisePolynomial,<:Tuple{Inclusion,Any}}) where {T,N}
-    P = parent(V)
-    kr,jr = parentindices(V)
-    J = findblock(axes(P,2), last(jr))
-    grid(view(P, kr, Block(1):J))
+for grd in (:grid, :plotgrid)
+    @eval begin
+        function $grd(P::PiecewisePolynomial, N::Block{1})
+            g = $grd(P.basis, Int(N))
+            repeatgrid(axes(P.basis, 1), g, P.points)
+        end
+        $grd(P::PiecewisePolynomial, n::Int) = $grd(P, findblock(axes(P,2),n))
+    end
 end
 
 

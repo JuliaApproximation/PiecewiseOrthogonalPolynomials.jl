@@ -5,7 +5,7 @@ import ArrayLayouts: sublayout, sub_materialize, symmetriclayout, transposelayou
 import BandedMatrices: _BandedMatrix
 import BlockArrays: BlockSlice, block, blockindex, blockvec
 import BlockBandedMatrices: _BandedBlockBandedMatrix, AbstractBandedBlockBandedMatrix, subblockbandwidths, blockbandwidths, AbstractBandedBlockBandedLayout, layout_replace_in_print_matrix
-import ClassicalOrthogonalPolynomials: grid, ldiv, pad, adaptivetransform_ldiv, grammatrix
+import ClassicalOrthogonalPolynomials: grid, plotgrid, ldiv, pad, adaptivetransform_ldiv, grammatrix
 import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBasisLayout, MemoryLayout, layout_broadcasted, ExpansionLayout, basis, plan_grid_transform, grammatrix
 import LazyArrays: paddeddata
 import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec, BandedLazyLayouts, AbstractLazyBandedBlockBandedLayout, UpperOrLowerTriangular
