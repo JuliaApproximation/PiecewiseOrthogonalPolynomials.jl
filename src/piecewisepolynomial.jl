@@ -25,15 +25,23 @@ function repeatgrid(ax, g, pts)
     ret
 end
 
-for grd in (:grid, :plotgrid)
-    @eval begin
-        function $grd(P::PiecewisePolynomial, N::Block{1})
-            g = $grd(P.basis, Int(N))
-            repeatgrid(axes(P.basis, 1), g, P.points)
-        end
-        $grd(P::PiecewisePolynomial, n::Int) = $grd(P, findblock(axes(P,2),n))
-    end
+
+function grid(P::PiecewisePolynomial, N::Block{1})
+    g = grid(P.basis, Int(N))
+    repeatgrid(axes(P.basis, 1), g, P.points)
 end
+
+function plotgrid(P::PiecewisePolynomial, N::Block{1})
+    g = plotgrid(P.basis, Int(N))
+    vec(repeatgrid(axes(P.basis, 1), g, P.points)[end:-1:1,:]) # sort
+end
+
+
+
+grid(P::PiecewisePolynomial, n::Int) = grid(P, findblock(axes(P,2),n))
+plotgrid(P::PiecewisePolynomial, n::Int) = plotgrid(P, findblock(axes(P,2),n))
+
+
 
 
 struct ApplyFactorization{T, FF, FAC<:Factorization{T}} <: Factorization{T}

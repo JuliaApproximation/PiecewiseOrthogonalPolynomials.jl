@@ -44,10 +44,10 @@ end
 
 factorize(V::SubQuasiArray{T,N,<:ContinuousPolynomial{0},<:Tuple{Inclusion,BlockSlice}}, dims...) where {T,N} =
     factorize(view(PiecewisePolynomial(parent(V)), parentindices(V)...), dims...)
-grid(V::SubQuasiArray{T,N,<:ContinuousPolynomial{0},<:Tuple{Inclusion,Any}}) where {T,N} =
-    grid(view(PiecewisePolynomial(parent(V)), parentindices(V)...))
-grid(V::SubQuasiArray{T,N,<:ContinuousPolynomial,<:Tuple{Inclusion,Any}}) where {T,N} =
-    grid(view(ContinuousPolynomial{0,T}(parent(V)), parentindices(V)...))    
+
+for grd in (:grid, :plotgrid)
+    @eval $grd(C::ContinuousPolynomial, n...) = $grd(PiecewisePolynomial(C), n...)
+end
 
 function adaptivetransform_ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiVector) where V
     T = promote_type(V, eltype(f))
@@ -95,23 +95,6 @@ end
 
 function \(P::ContinuousPolynomial{0}, C::ContinuousPolynomial{1})
     T = promote_type(eltype(P), eltype(C))
-    # diag blocks based on
-    # L = Legendre{T}() \ Weighted(Jacobi{T}(1,1))
-    @assert P.points == C.points
-    N = length(P.points)
-    v = mortar(Fill.((convert(T, 2):2:∞) ./ (3:2:∞), N - 1))
-    z = Zeros{T}(axes(v))
-    H1 = BlockBroadcastArray(hcat, z, v)
-    M1 = BlockVcat(Zeros{T}(N, 2), H1)
-    M2 = BlockVcat(Ones{T}(N, 2) / 2, Zeros{T}((axes(v, 1), Base.OneTo(2))))
-    H3 = BlockBroadcastArray(hcat, z, -v)
-    M3 = BlockVcat(Hcat(Ones{T}(N) / 2, -Ones{T}(N) / 2), H3)
-    dat = BlockHcat(M1, M2, M3)'
-    _BandedBlockBandedMatrix(dat, axes(P, 2), (1, 1), (0, 1))
-end
-
-function \(P::ContinuousPolynomial{0, <:Any, <:AbstractRange}, C::ContinuousPolynomial{1, <:Any, <:AbstractRange})
-    T = promote_type(eltype(P), eltype(C))
     @assert P.points == C.points
     v = (convert(T, 2):2:∞) ./ (3:2:∞)
     N = length(P.points)
@@ -132,7 +115,7 @@ function grammatrix(A::ContinuousPolynomial{0,T}) where T
     N = length(r) - 1
     hs = diff(r)
     M = grammatrix(Legendre{T}())
-    ArrowheadMatrix{T}(Diagonal(Fill(hs[1], N)), (), (), [Diagonal(M.diag[2:end] * h/2) for h in hs])
+    ArrowheadMatrix{T}(Diagonal(hs), (), (), [Diagonal(M.diag[2:end] * h/2) for h in hs])
 end
 
 function grammatrix(A::ContinuousPolynomial{0,T, <:AbstractRange}) where T
