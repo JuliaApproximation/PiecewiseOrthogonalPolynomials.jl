@@ -32,6 +32,7 @@ using PiecewiseOrthogonalPolynomials: ArrowheadMatrix
     @test (Q'Q)[KR,KR] ≈ M[KR,KR]
 
     @test (P / P \ f)[0.1] ≈ f[0.1]
+    @test ((P \ C) * (C \ f))[KR] ≈ (P \ f)[KR]
 
     @testset "generic points" begin
         Q̃ = DirichletPolynomial(collect(Q.points))
@@ -40,5 +41,6 @@ using PiecewiseOrthogonalPolynomials: ArrowheadMatrix
 
     @testset "plot" begin
         @test ClassicalOrthogonalPolynomials.grid(Q, 5) == ClassicalOrthogonalPolynomials.grid(Q, Block(2))
+        @test ClassicalOrthogonalPolynomials.plotgrid(Q, 5) == ClassicalOrthogonalPolynomials.plotgrid(Q, Block(2))
     end
 end
