@@ -30,4 +30,15 @@ using PiecewiseOrthogonalPolynomials: ArrowheadMatrix
     M = grammatrix(Q)
     @test (diff(Q)'diff(Q))[KR,KR] ≈ -Δ[KR,KR]
     @test (Q'Q)[KR,KR] ≈ M[KR,KR]
+
+    @test (P / P \ f)[0.1] ≈ f[0.1]
+
+    @testset "generic points" begin
+        Q̃ = DirichletPolynomial(collect(Q.points))
+        @test grammatrix(Q̃)[KR,KR] ≈ grammatrix(Q)[KR,KR]
+    end
+
+    @testset "plot" begin
+        @test ClassicalOrthogonalPolynomials.grid(Q, 5) == ClassicalOrthogonalPolynomials.grid(Q, Block(2))
+    end
 end
