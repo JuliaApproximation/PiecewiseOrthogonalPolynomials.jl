@@ -44,12 +44,12 @@ plotgrid(P::PiecewisePolynomial, n::Int) = plotgrid(P, findblock(axes(P,2),n))
 
 
 
-struct ApplyFactorization{T, FF, FAC<:Factorization{T}} <: Factorization{T}
+struct ApplyPlan{T, FF, FAC<:Plan{T}} <: Plan{T}
     f::FF
     F::FAC
 end
 
-\(P::ApplyFactorization, f) = P.f(P.F \ f)
+*(P::ApplyPlan, f::AbstractArray) = P.f(P.F * f)
 
 
 _perm_blockvec(X::AbstractMatrix) = BlockVec(transpose(X))
@@ -63,12 +63,15 @@ function _perm_blockvec(X::AbstractArray{T,3}) where T
     ret
 end
 
+function plan_grid_transform(P::PiecewisePolynomial, N::Block{1}, dims...)
+    x,F = plan_grid_transform(P.basis, (Int(N), length(P.points)-1, dims...), 1)
+    repeatgrid(axes(P.basis, 1), x, P.points), ApplyPlan(_perm_blockvec, F)
+end
+
 function factorize(V::SubQuasiArray{<:Any,2,<:PiecewisePolynomial,<:Tuple{Inclusion,BlockSlice}}, dims...)
     P = parent(V)
     _,JR = parentindices(V)
-    N = Int(last(JR.block))
-    x,F = plan_grid_transform(P.basis, Array{eltype(P)}(undef, N, length(P.points)-1, dims...), 1)
-    ApplyFactorization(_perm_blockvec, TransformFactorization(repeatgrid(axes(P.basis, 1), x, P.points), F))
+    TransformFactorization(plan_grid_transform(P, last(JR.block), dims...)...)
 end
 
 

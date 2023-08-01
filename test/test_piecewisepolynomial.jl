@@ -1,3 +1,6 @@
+using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, FillArrays, Test
+using LazyBandedMatrices: BlockVec
+
 @testset "transform" begin
     for r in (range(-1, 1; length=2), range(-1, 1; length=4), range(0, 1; length=4)), T in (Chebyshev(), Legendre())
         P = PiecewisePolynomial(T, r)

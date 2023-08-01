@@ -45,6 +45,8 @@ end
 factorize(V::SubQuasiArray{T,N,<:ContinuousPolynomial{0},<:Tuple{Inclusion,BlockSlice}}, dims...) where {T,N} =
     factorize(view(PiecewisePolynomial(parent(V)), parentindices(V)...), dims...)
 
+plan_grid_transform(P::ContinuousPolynomial{0}, args...) = plan_grid_transform(PiecewisePolynomial(P), args...)
+
 for grd in (:grid, :plotgrid)
     @eval $grd(C::ContinuousPolynomial, n...) = $grd(PiecewisePolynomial(C), n...)
 end
