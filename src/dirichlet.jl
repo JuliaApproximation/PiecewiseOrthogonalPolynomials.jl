@@ -103,3 +103,10 @@ end
 for grd in (:grid, :plotgrid)
     @eval $grd(C::DirichletPolynomial, n...) = $grd(PiecewisePolynomial(C), n...)
 end
+
+###
+# singularities
+###
+
+singularities(C::DirichletPolynomial) = C
+basis_singularities(C::DirichletPolynomial) = C

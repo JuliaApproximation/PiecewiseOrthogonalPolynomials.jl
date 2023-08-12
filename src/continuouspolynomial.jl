@@ -195,3 +195,11 @@ function weaklaplacian(C::ContinuousPolynomial{1,T,<:AbstractRange}) where T
         Fill(Diagonal(convert(T, -16) .* (1:∞) .^ 2 ./ (s .* ((2:2:∞) .+ 1))), N-1)))
 end
 
+
+
+###
+# singularities
+###
+
+singularities(C::ContinuousPolynomial{λ}) where λ = C
+basis_singularities(C::ContinuousPolynomial) = C

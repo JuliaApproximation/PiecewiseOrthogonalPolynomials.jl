@@ -111,3 +111,11 @@ function layout_broadcasted(::Tuple{ExpansionLayout{PiecewisePolynomialLayout{0}
     P = ContinuousPolynomial{0}(C)
     (a .* P) * (P \ C)
 end
+
+
+###
+# singularities
+###
+
+singularities(C::PiecewisePolynomial) = C
+basis_singularities(C::PiecewisePolynomial) = C
