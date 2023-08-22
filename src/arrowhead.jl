@@ -25,6 +25,8 @@ const ArrowheadMatrices = Union{ArrowheadMatrix,Symmetric{<:Any,<:ArrowheadMatri
 
 subblockbandwidths(A::ArrowheadMatrices) = (1,1)
 
+BlockArrays._show_typeof(io::IO, B::ArrowheadMatrix{T}) where T = print(io, "ArrowheadMatrix{$T}")
+
 function blockbandwidths(A::ArrowheadMatrix)
     l,u = bandwidths(A.D[1])
     max(l,length(A.C)),max(u,length(A.B))
