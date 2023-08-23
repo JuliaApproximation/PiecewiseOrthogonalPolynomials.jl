@@ -181,7 +181,7 @@ function diff(C::ContinuousPolynomial{1,T}; dims=1) where T
     H = BlockBroadcastArray(hcat, z, v)
     M = BlockVcat(Hcat(Ones{T}(N) .* [zero(T); s] , -Ones{T}(N) .* [s; zero(T)] ), H)
     P = ContinuousPolynomial{0}(C)
-    ApplyQuasiMatrix(*, P, _BandedBlockBandedMatrix(M', (axes(P, 2), axes(C, 2)), (0, 0), (0, 1)))
+    ApplyQuasiMatrix(*, P, _BandedBlockBandedMatrix(M', axes(P, 2), (0, 0), (0, 1)))
 end
 
 function weaklaplacian(C::ContinuousPolynomial{1,T,<:AbstractRange}) where T
