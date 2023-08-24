@@ -31,6 +31,7 @@ using LazyBandedMatrices: BlockVec
     @testset "expand" begin
         r = range(-1, 1; length=4)
         P = PiecewisePolynomial(Legendre(), r)
+        f = expand(P, exp)
         @test expand(exp.(f))[0.1] ≈ exp(f[0.1])
     end
 end
