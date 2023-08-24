@@ -47,6 +47,7 @@ using PiecewiseOrthogonalPolynomials: ArrowheadMatrix
     end
 
     @testset "expand" begin
+        @test expand(sin.(f))[0.1] ≈ sin(f[0.1])
         @test expand(exp.(f))[0.1] ≈ exp(f[0.1])
     end
 end

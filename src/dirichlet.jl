@@ -111,3 +111,4 @@ end
 singularities(C::DirichletPolynomial) = C
 basis_singularities(C::DirichletPolynomial) = C
 singularitiesbroadcast(_, Q::DirichletPolynomial) = ContinuousPolynomial{1}(Q) # Assume we stay smooth but might not vanish
+singularitiesbroadcast(::typeof(sin), Q::DirichletPolynomial) = Q # Smooth functions such that f(0) == 0 preserve behaviour
