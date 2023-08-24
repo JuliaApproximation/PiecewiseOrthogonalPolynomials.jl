@@ -25,6 +25,8 @@ const ArrowheadMatrices = Union{ArrowheadMatrix,Symmetric{<:Any,<:ArrowheadMatri
 
 subblockbandwidths(A::ArrowheadMatrices) = (1,1)
 
+BlockArrays._show_typeof(io::IO, B::ArrowheadMatrix{T}) where T = print(io, "ArrowheadMatrix{$T}")
+
 function blockbandwidths(A::ArrowheadMatrix)
     l,u = bandwidths(A.D[1])
     max(l,length(A.C)),max(u,length(A.B))
@@ -193,10 +195,10 @@ function materialize!(M::MatMulMatAdd{<:ArrowheadLayouts,<:AbstractColumnMajor,<
     _fill_lmul!(β, Y)
     for J = blockaxes(X,2)
         mul!(view(Y, Block(1), J), A.A, view(X, Block(1), J), α, one(α))
-        for k = 1:length(A.B)
+        for k = 1:min(length(A.B), blocksize(X,1)-1)
             mul!(view(Y, Block(1), J), A.B[k], view(X, Block(k+1), J), α, one(α))
         end
-        for k = 1:length(A.C)
+        for k = 1:min(length(A.C), blocksize(Y,1)-1)
             mul!(view(Y, Block(k+1), J), A.C[k], view(X, Block(1), J), α, one(α))
         end
     end

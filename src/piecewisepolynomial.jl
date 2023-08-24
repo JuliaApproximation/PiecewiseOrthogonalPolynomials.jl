@@ -25,28 +25,31 @@ function repeatgrid(ax, g, pts)
     ret
 end
 
-function grid(V::SubQuasiArray{T,2,<:PiecewisePolynomial,<:Tuple{Inclusion,BlockSlice}}) where {T}
-    P = parent(V)
-    _, JR = parentindices(V)
-    N = Int(last(JR))
-    g = grid(P.basis[:, OneTo(N)])
+
+function grid(P::PiecewisePolynomial, N::Block{1})
+    g = grid(P.basis, Int(N))
     repeatgrid(axes(P.basis, 1), g, P.points)
 end
 
-function grid(V::SubQuasiArray{T,N,<:PiecewisePolynomial,<:Tuple{Inclusion,Any}}) where {T,N}
-    P = parent(V)
-    kr,jr = parentindices(V)
-    J = findblock(axes(P,2), last(jr))
-    grid(view(P, kr, Block(1):J))
+function plotgrid(P::PiecewisePolynomial, N::Block{1})
+    g = plotgrid(P.basis, Int(N))
+    vec(repeatgrid(axes(P.basis, 1), g, P.points)[end:-1:1,:]) # sort
 end
 
 
-struct ApplyFactorization{T, FF, FAC<:Factorization{T}} <: Factorization{T}
+
+grid(P::PiecewisePolynomial, n::Int) = grid(P, findblock(axes(P,2),n))
+plotgrid(P::PiecewisePolynomial, n::Int) = plotgrid(P, findblock(axes(P,2),n))
+
+
+
+
+struct ApplyPlan{T, FF, FAC<:Plan{T}} <: Plan{T}
     f::FF
     F::FAC
 end
 
-\(P::ApplyFactorization, f) = P.f(P.F \ f)
+*(P::ApplyPlan, f::AbstractArray) = P.f(P.F * f)
 
 
 _perm_blockvec(X::AbstractMatrix) = BlockVec(transpose(X))
@@ -60,12 +63,15 @@ function _perm_blockvec(X::AbstractArray{T,3}) where T
     ret
 end
 
+function plan_grid_transform(P::PiecewisePolynomial, N::Block{1}, dims...)
+    x,F = plan_grid_transform(P.basis, (Int(N), length(P.points)-1, dims...), 1)
+    repeatgrid(axes(P.basis, 1), x, P.points), ApplyPlan(_perm_blockvec, F)
+end
+
 function factorize(V::SubQuasiArray{<:Any,2,<:PiecewisePolynomial,<:Tuple{Inclusion,BlockSlice}}, dims...)
     P = parent(V)
     _,JR = parentindices(V)
-    N = Int(last(JR.block))
-    x,F = plan_grid_transform(P.basis, Array{eltype(P)}(undef, N, length(P.points)-1, dims...), 1)
-    ApplyFactorization(_perm_blockvec, TransformFactorization(repeatgrid(axes(P.basis, 1), x, P.points), F))
+    TransformFactorization(plan_grid_transform(P, last(JR.block), dims...)...)
 end
 
 
@@ -105,3 +111,12 @@ function layout_broadcasted(::Tuple{ExpansionLayout{PiecewisePolynomialLayout{0}
     P = ContinuousPolynomial{0}(C)
     (a .* P) * (P \ C)
 end
+
+
+###
+# singularities
+###
+
+singularities(C::PiecewisePolynomial) = C
+basis_singularities(C::PiecewisePolynomial) = C
+singularitiesbroadcast(_, C::PiecewisePolynomial) = C # Assume we stay piecewise smooth

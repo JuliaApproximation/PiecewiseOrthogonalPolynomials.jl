@@ -43,6 +43,11 @@ function \(Q::DirichletPolynomial, C::ContinuousPolynomial{1})
     ArrowheadMatrix(layout_getindex(Eye{T}(m), 2:m-1, :), (), (), Fill(Eye{T}(∞), m-1))
 end
 
+function \(P::ContinuousPolynomial, Q::DirichletPolynomial)
+    C = ContinuousPolynomial{1}(Q)
+    (P \ C) * (C \ Q)
+end
+
 
 function adaptivetransform_ldiv(Q::DirichletPolynomial{V}, f::AbstractQuasiVector) where V
     C = ContinuousPolynomial{1}(Q)
@@ -78,6 +83,12 @@ function grammatrix(Q::DirichletPolynomial{T, <:AbstractRange}) where T
                 (h*b/2)'), ∞, 0, 2), N)))
 end
 
+function grammatrix(Q::DirichletPolynomial)
+    C = ContinuousPolynomial{1}(Q)
+    R = C \ Q
+    R' * grammatrix(C) * R
+end
+
 @simplify function *(Ac::QuasiAdjoint{<:Any,<:DirichletPolynomial}, B::ContinuousPolynomial)
     A = Ac'
     C = ContinuousPolynomial{1}(A)
@@ -88,3 +99,16 @@ function diff(Q::DirichletPolynomial{T}; dims=1) where T
     C = ContinuousPolynomial{1}(Q)
     diff(C; dims=dims) * (C \ Q)
 end
+
+for grd in (:grid, :plotgrid)
+    @eval $grd(C::DirichletPolynomial, n...) = $grd(PiecewisePolynomial(C), n...)
+end
+
+###
+# singularities
+###
+
+singularities(C::DirichletPolynomial) = C
+basis_singularities(C::DirichletPolynomial) = C
+singularitiesbroadcast(_, Q::DirichletPolynomial) = ContinuousPolynomial{1}(Q) # Assume we stay smooth but might not vanish
+singularitiesbroadcast(::typeof(sin), Q::DirichletPolynomial) = Q # Smooth functions such that f(0) == 0 preserve behaviour

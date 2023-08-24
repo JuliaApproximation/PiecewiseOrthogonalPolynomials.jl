@@ -22,6 +22,8 @@ using PiecewiseOrthogonalPolynomials: ArrowheadMatrix
     KR = Block.(Base.OneTo(10))
     @test ((Q'C) * (C\f))[KR] ≈ (Q'C)[KR,KR] * (C\f)[KR]
 
+    @test (P * ((P\Q) * (Q\f)))[0.1] ≈ f[0.1]
+
     let x = 0.1
         @test diff(f)[x] ≈ -2exp(x)*x + exp(x)*(1 - x^2) 
     end
@@ -30,4 +32,22 @@ using PiecewiseOrthogonalPolynomials: ArrowheadMatrix
     M = grammatrix(Q)
     @test (diff(Q)'diff(Q))[KR,KR] ≈ -Δ[KR,KR]
     @test (Q'Q)[KR,KR] ≈ M[KR,KR]
+
+    @test (P / P \ f)[0.1] ≈ f[0.1]
+    @test ((P \ C) * (C \ f))[KR] ≈ (P \ f)[KR]
+
+    @testset "generic points" begin
+        Q̃ = DirichletPolynomial(collect(Q.points))
+        @test grammatrix(Q̃)[KR,KR] ≈ grammatrix(Q)[KR,KR]
+    end
+
+    @testset "plot" begin
+        @test ClassicalOrthogonalPolynomials.grid(Q, 5) == ClassicalOrthogonalPolynomials.grid(Q, Block(2))
+        @test ClassicalOrthogonalPolynomials.plotgrid(Q, 5) == ClassicalOrthogonalPolynomials.plotgrid(Q, Block(2))
+    end
+
+    @testset "expand" begin
+        @test expand(sin.(f))[0.1] ≈ sin(f[0.1])
+        @test expand(exp.(f))[0.1] ≈ exp(f[0.1])
+    end
 end
