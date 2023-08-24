@@ -203,3 +203,4 @@ end
 
 singularities(C::ContinuousPolynomial{λ}) where λ = C
 basis_singularities(C::ContinuousPolynomial) = C
+singularitiesbroadcast(_, C::ContinuousPolynomial) = C # Assume we stay smooth
