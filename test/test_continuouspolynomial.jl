@@ -150,4 +150,11 @@ using PiecewiseOrthogonalPolynomials, StaticArrays, InfiniteArrays, ContinuumArr
         f = expand(C, exp)
         @test expand(exp.(f))[0.1] ≈ exp(exp(0.1))
     end
+
+    @testset "sum" begin
+        r = [-1, 0.1, 0.2, 1]
+        P = ContinuousPolynomial{0}(r)
+        C = ContinuousPolynomial{1}(r)
+        @test sum(expand(P, exp)) ≈ sum(expand(C, exp)) ≈ ℯ - 1/ℯ
+    end
 end
