@@ -46,6 +46,7 @@ factorize(V::SubQuasiArray{T,N,<:ContinuousPolynomial{0},<:Tuple{Inclusion,Block
     factorize(view(PiecewisePolynomial(parent(V)), parentindices(V)...), dims...)
 
 plan_grid_transform(P::ContinuousPolynomial{0}, args...) = plan_grid_transform(PiecewisePolynomial(P), args...)
+plan_grid_transform(P::ContinuousPolynomial{0}, lng::Union{Integer, Block{1}}, args...) = plan_grid_transform(PiecewisePolynomial(P), lng, args...)
 
 for grd in (:grid, :plotgrid)
     @eval $grd(C::ContinuousPolynomial, n...) = $grd(PiecewisePolynomial(C), n...)
@@ -204,3 +205,14 @@ end
 singularities(C::ContinuousPolynomial{λ}) where λ = C
 basis_singularities(C::ContinuousPolynomial) = C
 singularitiesbroadcast(_, C::ContinuousPolynomial) = C # Assume we stay smooth
+
+
+###
+# sum
+###
+
+_sum(C::ContinuousPolynomial{0}, dims) = _sum(PiecewisePolynomial(C), dims)
+function _sum(C::ContinuousPolynomial, dims)
+    P = ContinuousPolynomial{0}(C)
+    _sum(P, dims) * (P \ C)
+end

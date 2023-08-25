@@ -120,3 +120,8 @@ end
 singularities(C::PiecewisePolynomial) = C
 basis_singularities(C::PiecewisePolynomial) = C
 singularitiesbroadcast(_, C::PiecewisePolynomial) = C # Assume we stay piecewise smooth
+
+####
+# sum
+####
+_sum(P::PiecewisePolynomial, dims) = blockvec(diff(P.points)/2 .* sum(P.basis; dims=1))'
