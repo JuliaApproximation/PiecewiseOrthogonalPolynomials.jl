@@ -210,7 +210,7 @@ singularitiesbroadcast(_, C::ContinuousPolynomial) = C # Assume we stay smooth
 # sum
 ###
 
-_sum(C::ContinuousPolynomial{0,T}, dims) where T = blockvec(diff(C.points)/2 .* sum(Legendre{T}(); dims=1))'
+_sum(C::ContinuousPolynomial{0}, dims) = _sum(PiecewisePolynomial(C), dims)
 function _sum(C::ContinuousPolynomial, dims)
     P = ContinuousPolynomial{0}(C)
     _sum(P, dims) * (P \ C)
