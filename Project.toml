@@ -21,7 +21,7 @@ QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 
 [compat]
 ArrayLayouts = "1.0.12"
-BandedMatrices = "0.17.33"
+BandedMatrices = "0.17.33, 1"
 BlockArrays = "0.16.25"
 BlockBandedMatrices = "0.12.2"
 ClassicalOrthogonalPolynomials = "0.11"
