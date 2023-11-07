@@ -12,7 +12,7 @@ PiecewisePolynomial(P::ContinuousPolynomial{o,T}) where {o,T} = PiecewisePolynom
 
 axes(B::ContinuousPolynomial{0}) = axes(PiecewisePolynomial(B))
 axes(B::ContinuousPolynomial{1}) = (Inclusion(first(B.points) .. last(B.points)), blockedrange(Vcat(length(B.points), Fill(length(B.points) - 1, ∞))))
-axes(B::ContinuousPolynomial{1}) = (Inclusion(first(B.points) .. last(B.points)), blockedrange(Vcat(length(B.points-2), Fill(length(B.points) - 1, ∞))))
+axes(B::ContinuousPolynomial{-1}) = (Inclusion(first(B.points) .. last(B.points)), blockedrange(Vcat(length(B.points)-2, Fill(length(B.points) - 1, ∞))))
 
 ==(P::PiecewisePolynomial, C::ContinuousPolynomial{0}) = P == PiecewisePolynomial(C)
 ==(C::ContinuousPolynomial{0}, P::PiecewisePolynomial) = PiecewisePolynomial(C) == P
@@ -193,13 +193,12 @@ function diff(C::ContinuousPolynomial{1,T}; dims=1) where T
     r = C.points
     N = length(r)
     s = one(T) ./ (r[2:end]-r[1:end-1])
-    v = mortar(Fill(T(2) * s, ∞)) .* mortar(Fill.((-convert(T, 2):-2:-∞), N - 1))
-    z = Zeros{T}(axes(v))
-    H = BlockBroadcastArray(hcat, z, v)
-    M = BlockVcat(Hcat(Ones{T}(N) .* [zero(T); s] , -Ones{T}(N) .* [s; zero(T)] ), H)
     P = ContinuousPolynomial{0}(C)
-    ApplyQuasiMatrix(*, P, _BandedBlockBandedMatrix(M', axes(P, 2), (0, 0), (0, 1)))
+    D = ArrowheadMatrix(_BandedMatrix([0 s'; -s' 0], length(s), 0, 1), (), (),
+                        [Diagonal(2s̃ * (-convert(T, 2):-2:-∞)) for s̃ in s])
+    ApplyQuasiMatrix(*, P, D)
 end
+
 
 function weaklaplacian(C::ContinuousPolynomial{1,T,<:AbstractRange}) where T
     r = C.points

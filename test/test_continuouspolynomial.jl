@@ -157,4 +157,13 @@ using PiecewiseOrthogonalPolynomials, StaticArrays, InfiniteArrays, ContinuumArr
         C = ContinuousPolynomial{1}(r)
         @test sum(expand(P, exp)) ≈ sum(expand(C, exp)) ≈ ℯ - 1/ℯ
     end
+
+    @testset "Dirac" begin
+        r = range(-1,1; length=4)
+        C = ContinuousPolynomial{1}(r)
+        P = ContinuousPolynomial{0}(r)
+        H = ContinuousPolynomial{-1}(r)
+        H\P
+        diff(P)
+    end
 end
