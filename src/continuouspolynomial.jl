@@ -11,8 +11,8 @@ ContinuousPolynomial{o}(P::ContinuousPolynomial) where {o} = ContinuousPolynomia
 PiecewisePolynomial(P::ContinuousPolynomial{o,T}) where {o,T} = PiecewisePolynomial(Legendre{T}(), P.points)
 
 axes(B::ContinuousPolynomial{0}) = axes(PiecewisePolynomial(B))
-axes(B::ContinuousPolynomial{1}) =
-    (Inclusion(first(B.points) .. last(B.points)), blockedrange(Vcat(length(B.points), Fill(length(B.points) - 1, ∞))))
+axes(B::ContinuousPolynomial{1}) = (Inclusion(first(B.points) .. last(B.points)), blockedrange(Vcat(length(B.points), Fill(length(B.points) - 1, ∞))))
+axes(B::ContinuousPolynomial{1}) = (Inclusion(first(B.points) .. last(B.points)), blockedrange(Vcat(length(B.points-2), Fill(length(B.points) - 1, ∞))))
 
 ==(P::PiecewisePolynomial, C::ContinuousPolynomial{0}) = P == PiecewisePolynomial(C)
 ==(C::ContinuousPolynomial{0}, P::PiecewisePolynomial) = PiecewisePolynomial(C) == P
@@ -34,6 +34,21 @@ function getindex(P::ContinuousPolynomial{1,T}, x::Number, Kk::BlockIndex{1}) wh
         if b == k
             α, β = convert(T, P.points[b]), convert(T, P.points[b+1])
             Weighted(Jacobi{T}(1, 1))[affine(α.. β, ChebyshevInterval{real(T)}())[x], Int(K)-1]
+        else
+            zero(T)
+        end
+    end
+end
+
+function getindex(P::ContinuousPolynomial{-1,T}, x::Number, Kk::BlockIndex{1}) where {T}
+    K, k = block(Kk), blockindex(Kk)
+    if K == Block(1)
+        Spline{-1,T}(P.points)[x, k]
+    else
+        b = searchsortedlast(P.points, x)
+        if b == k
+            α, β = convert(T, P.points[b]), convert(T, P.points[b+1])
+            Jacobi{T}(1, 1)[affine(α.. β, ChebyshevInterval{real(T)}())[x], Int(K)-1]
         else
             zero(T)
         end
@@ -106,6 +121,7 @@ function \(P::ContinuousPolynomial{0}, C::ContinuousPolynomial{1})
         (_BandedMatrix(Vcat(Ones{T}(1, N)/2, -Ones{T}(1, N)/2), oneto(N-1), 0, 1),),
         Fill(_BandedMatrix(Hcat(v, Zeros{T}(∞), -v)', axes(v,1), 1, 1), N-1))
 end
+
 
 
 
