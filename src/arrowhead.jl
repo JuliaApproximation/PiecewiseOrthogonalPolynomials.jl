@@ -16,7 +16,8 @@ struct ArrowheadMatrix{T, AA<:AbstractMatrix{T}, BB, CC, DD} <: AbstractBandedBl
     ArrowheadMatrix{T, AA, BB, CC, DD}(A, B, C, D) where {T,AA,BB,CC,DD} = new{T,AA,BB,CC,DD}(A, B, C, D)
 end
 
-ArrowheadMatrix{T}(A, B, C, D) where T = ArrowheadMatrix{T, typeof(A), typeof(B), typeof(C), typeof(D)}(A, B, C, D)
+ArrowheadMatrix{T}(A::AbstractMatrix{T}, B, C, D) where T = ArrowheadMatrix{T, typeof(A), typeof(B), typeof(C), typeof(D)}(A, B, C, D)
+ArrowheadMatrix{T}(A, B, C, D) where T = ArrowheadMatrix(convert(AbstractMatrix{T}, A), B, C, D)
 
 const ArrowheadMatrices = Union{ArrowheadMatrix,Symmetric{<:Any,<:ArrowheadMatrix},Hermitian{<:Any,<:ArrowheadMatrix},
                                 UpperOrLowerTriangular{<:Any,<:ArrowheadMatrix}}
