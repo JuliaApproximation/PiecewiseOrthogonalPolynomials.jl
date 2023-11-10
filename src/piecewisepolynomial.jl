@@ -63,7 +63,7 @@ function _perm_blockvec(X::AbstractArray{T,3}) where T
     ret
 end
 
-function plan_grid_transform(P::PiecewisePolynomial, N::Block{1}, dims...)
+function plan_grid_transform(P::PiecewisePolynomial, (N,)::Tuple{Block{1}}, dims...)
     x,F = plan_grid_transform(P.basis, (Int(N), length(P.points)-1, dims...), 1)
     repeatgrid(axes(P.basis, 1), x, P.points), ApplyPlan(_perm_blockvec, F)
 end
