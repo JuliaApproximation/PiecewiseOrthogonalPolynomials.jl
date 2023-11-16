@@ -67,8 +67,8 @@ function _perm_blockvec(X::AbstractArray{T,3}, dims=1) where T
     end
     ret
 end
-function _perm_blockvec(X::AbstractArray{T,4}, dims=1:2) where T
-    @assert dims == 1:2
+function _perm_blockvec(X::AbstractArray{T,4}, dims=(1,2)) where T
+    @assert dims == 1:2 || dims == (1,2)
     X1 = _perm_blockvec(X[:,:,1,1])
     X2 = _perm_blockvec(X[1,1,:,:])
     ret = PseudoBlockMatrix{T}(undef, (axes(X1,1), axes(X2,1)))
@@ -83,19 +83,19 @@ _interlace_const(n, m, ms...) = (m, n, _interlace_const(n, ms...)...)
 
 # we transform a piecewise transform into a tensor transform where each even dimensional slice corresponds to a different piece.
 # that is, we don't transform the last dimension.
-function plan_grid_transform(P::PiecewisePolynomial, Ns::NTuple{N,Block{1}}, dims=1:N) where N
+function plan_transform(P::PiecewisePolynomial, Ns::NTuple{N,Block{1}}, dims=ntuple(identity,Val(N))) where N
     @assert dims == 1:N || dims == ntuple(identity,Val(N)) || (N == dims == 1)
-    x,F = plan_grid_transform(P.basis, _interlace_const(length(P.points)-1, Int.(Ns)...), range(1; step=2, length=N))
-    repeatgrid(axes(P.basis, 1), x, P.points), ApplyPlan(_perm_blockvec, F, (dims,))
+    F = plan_transform(P.basis, _interlace_const(length(P.points)-1, Int.(Ns)...), range(1; step=2, length=N))
+    ApplyPlan(_perm_blockvec, F,  (dims,))
 end
 
 
 # If one dimension is an integer then this means its a vector transform. That is, we are only transforming
 # along one dimension.We add an extra dimension for the different entries in the vectors.
-function plan_grid_transform(P::PiecewisePolynomial, (M,n)::Tuple{Block{1},Int}, dims::Int)
+function plan_transform(P::PiecewisePolynomial, (M,n)::Tuple{Block{1},Int}, dims::Int)
     @assert dims == 1
-    x,F = plan_grid_transform(P.basis, (Int(M), length(P.points)-1, n), dims)
-    repeatgrid(axes(P.basis, 1), x, P.points), ApplyPlan(_perm_blockvec, F, (dims,))
+    F = plan_transform(P.basis, (Int(M), length(P.points)-1, n), dims)
+    ApplyPlan(_perm_blockvec, F, (dims,))
 end
 
 function factorize(V::SubQuasiArray{<:Any,2,<:PiecewisePolynomial,<:Tuple{Inclusion,BlockSlice}}, dims...)

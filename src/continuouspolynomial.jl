@@ -45,11 +45,14 @@ end
 factorize(V::SubQuasiArray{T,N,<:ContinuousPolynomial{0},<:Tuple{Inclusion,BlockSlice}}, dims...) where {T,N} =
     factorize(view(PiecewisePolynomial(parent(V)), parentindices(V)...), dims...)
 
-plan_grid_transform(P::ContinuousPolynomial{0}, args...) = plan_grid_transform(PiecewisePolynomial(P), args...)
-plan_grid_transform(P::ContinuousPolynomial{0}, lng::Union{Integer, Block{1}}, args...) = plan_grid_transform(PiecewisePolynomial(P), lng, args...)
+plan_transform(P::ContinuousPolynomial{0}, szs::NTuple{N,Union{Int,Block{1}}}, dims=ntuple(identity,Val(N))) where N = plan_transform(PiecewisePolynomial(P), szs, dims)
+
 
 for grd in (:grid, :plotgrid)
-    @eval $grd(C::ContinuousPolynomial, n...) = $grd(PiecewisePolynomial(C), n...)
+    @eval begin
+        $grd(C::ContinuousPolynomial, n::Block{1}) = $grd(PiecewisePolynomial(C), n) 
+        $grd(C::ContinuousPolynomial, n::Int) = $grd(PiecewisePolynomial(C), n) 
+    end
 end
 
 function adaptivetransform_ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiVector) where V
