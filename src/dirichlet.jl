@@ -101,7 +101,10 @@ function diff(Q::DirichletPolynomial{T}; dims=1) where T
 end
 
 for grd in (:grid, :plotgrid)
-    @eval $grd(C::DirichletPolynomial, n...) = $grd(PiecewisePolynomial(C), n...)
+    @eval begin
+        $grd(C::DirichletPolynomial, n::Integer) = $grd(PiecewisePolynomial(C), n)
+        $grd(C::DirichletPolynomial, n::Block{1}) = $grd(PiecewisePolynomial(C), n)
+    end
 end
 
 ###
