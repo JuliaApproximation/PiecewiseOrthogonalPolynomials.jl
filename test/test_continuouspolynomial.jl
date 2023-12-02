@@ -1,5 +1,6 @@
 using PiecewiseOrthogonalPolynomials, StaticArrays, InfiniteArrays, ContinuumArrays, Test
-
+import LazyBandedMatrices: MemoryLayout, AbstractBandedBlockBandedLayout, BlockVec
+import ForwardDiff: derivative
 
 @testset "ContinuousPolynomial" begin
     @testset "transform" begin

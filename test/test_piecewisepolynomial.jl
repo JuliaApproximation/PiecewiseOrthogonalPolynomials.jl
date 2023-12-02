@@ -1,4 +1,5 @@
 using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, FillArrays, Test
+using PiecewiseOrthogonalPolynomials: plan_grid_transform, grid
 using LazyBandedMatrices: BlockVec
 
 @testset "PiecewisePolynomial" begin
@@ -22,9 +23,23 @@ using LazyBandedMatrices: BlockVec
         @test grid(P[:,1:27]) == grid(Pₙ)
 
         @testset "matrix" begin
-            P = PiecewisePolynomial(Chebyshev(), range(0,1; length=3))
-            @test P[:,Block.(Base.OneTo(3))] \ P[:,1:2] == Eye(6,2)
-            @test P[:,Block.(Base.OneTo(3))] \ (P[:,2] .* P[:,1:2]) ≈ P[:,Block.(Base.OneTo(3))] \ (P[:,2] .* P[:,Block(1)]) ≈ [P[:,Block.(Base.OneTo(3))]\(P[:,2] .* P[:,1]) P[:,Block.(Base.OneTo(3))]\(P[:,2] .* P[:,2])] 
+            for P in (PiecewisePolynomial(Chebyshev(), range(0,1; length=3)), PiecewisePolynomial(Legendre(), range(0,1; length=3)))
+                @test P[:,Block.(Base.OneTo(3))] \ P[:,1:2] == Eye(6,2)
+                @test P[:,Block.(Base.OneTo(3))] \ (P[:,2] .* P[:,1:2]) ≈ P[:,Block.(Base.OneTo(3))] \ (P[:,2] .* P[:,Block(1)]) ≈ [P[:,Block.(Base.OneTo(3))]\(P[:,2] .* P[:,1]) P[:,Block.(Base.OneTo(3))]\(P[:,2] .* P[:,2])]
+                
+                
+                x,F = plan_grid_transform(P, (Block(10),2), 1)
+                KR = Block.(1:10)
+                @test F * [exp.(x) ;;; cos.(x)] ≈ [transform(P,exp)[KR] transform(P,cos)[KR]]
+
+                t = axes(P,1)
+                @test (P \ [cos.(t) sin.(t)])[KR,:] ≈ [(P\cos.(t))[KR,:] (P\sin.(t))[KR,:]]
+
+                F = plan_transform(P, (Block(10), Block(11)))
+                x,y = grid(P, Block(10)), grid(P, Block(11))
+                C = F * exp.(x .+ cos.(reshape(y,1,1,size(y)...)))
+                @test P[0.1, Block.(1:10)]' * C * P[0.2, Block.(1:11)] ≈ exp(0.1 + cos(0.2))
+            end
         end
     end
 

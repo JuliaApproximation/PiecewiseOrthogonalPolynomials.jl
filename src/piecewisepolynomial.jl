@@ -44,16 +44,21 @@ plotgrid(P::PiecewisePolynomial, n::Int) = plotgrid(P, findblock(axes(P,2),n))
 
 
 
-struct ApplyPlan{T, FF, FAC<:Plan{T}} <: Plan{T}
+struct ApplyPlan{T, FF, FAC<:Plan{T}, Args} <: Plan{T}
     f::FF
     F::FAC
+    args::Args
 end
 
-*(P::ApplyPlan, f::AbstractArray) = P.f(P.F * f)
+*(P::ApplyPlan, f::AbstractArray) = P.f(P.F * f, P.args...)
 
 
-_perm_blockvec(X::AbstractMatrix) = BlockVec(transpose(X))
-function _perm_blockvec(X::AbstractArray{T,3}) where T
+function _perm_blockvec(X::AbstractMatrix, dims=1)
+    @assert dims == 1 || dims == (1,) || dims == 1:1
+    BlockVec(transpose(X))
+end
+function _perm_blockvec(X::AbstractArray{T,3}, dims=1) where T
+    @assert dims == 1
     X1 = _perm_blockvec(X[:,:,1])
     ret = PseudoBlockMatrix{T}(undef, (axes(X1,1), axes(X,3)))
     ret[:,1] = X1
@@ -62,16 +67,41 @@ function _perm_blockvec(X::AbstractArray{T,3}) where T
     end
     ret
 end
+function _perm_blockvec(X::AbstractArray{T,4}, dims=(1,2)) where T
+    @assert dims == 1:2 || dims == (1,2)
+    X1 = _perm_blockvec(X[:,:,1,1])
+    X2 = _perm_blockvec(X[1,1,:,:])
+    ret = PseudoBlockMatrix{T}(undef, (axes(X1,1), axes(X2,1)))
+    for k = 1:size(X,1), j = 1:size(X,2), l = 1:size(X,3), m = 1:size(X,4)
+        ret[Block(k)[j], Block(l)[m]] = X[k,j,l,m]
+    end
+    ret
+end
 
-function plan_grid_transform(P::PiecewisePolynomial, (N,)::Tuple{Block{1}}, dims...)
-    x,F = plan_grid_transform(P.basis, (Int(N), length(P.points)-1, dims...), 1)
-    repeatgrid(axes(P.basis, 1), x, P.points), ApplyPlan(_perm_blockvec, F)
+_interlace_const(n) = ()
+_interlace_const(n, m, ms...) = (m, n, _interlace_const(n, ms...)...)
+
+# we transform a piecewise transform into a tensor transform where each even dimensional slice corresponds to a different piece.
+# that is, we don't transform the last dimension.
+function plan_transform(P::PiecewisePolynomial, Ns::NTuple{N,Block{1}}, dims=ntuple(identity,Val(N))) where N
+    @assert dims == 1:N || dims == ntuple(identity,Val(N)) || (N == dims == 1)
+    F = plan_transform(P.basis, _interlace_const(length(P.points)-1, Int.(Ns)...), range(1; step=2, length=N))
+    ApplyPlan(_perm_blockvec, F,  (dims,))
+end
+
+
+# If one dimension is an integer then this means its a vector transform. That is, we are only transforming
+# along one dimension.We add an extra dimension for the different entries in the vectors.
+function plan_transform(P::PiecewisePolynomial, (M,n)::Tuple{Block{1},Int}, dims::Int)
+    @assert dims == 1
+    F = plan_transform(P.basis, (Int(M), length(P.points)-1, n), dims)
+    ApplyPlan(_perm_blockvec, F, (dims,))
 end
 
 function factorize(V::SubQuasiArray{<:Any,2,<:PiecewisePolynomial,<:Tuple{Inclusion,BlockSlice}}, dims...)
     P = parent(V)
     _,JR = parentindices(V)
-    TransformFactorization(plan_grid_transform(P, last(JR.block), dims...)...)
+    TransformFactorization(plan_grid_transform(P, (last(JR.block), dims...), 1)...)
 end
 
 
