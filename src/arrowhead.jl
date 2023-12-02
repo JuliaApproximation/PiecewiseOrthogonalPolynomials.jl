@@ -110,6 +110,7 @@ ArrowheadLayouts = Union{ArrowheadLayout,LazyArrowheadLayout,
                     TriangularLayout{'U', 'U', LazyArrowheadLayout}, TriangularLayout{'L', 'U', LazyArrowheadLayout}}
 arrowheadlayout(_) = ArrowheadLayout()
 arrowheadlayout(::BandedLazyLayouts) = LazyArrowheadLayout()
+arrowheadlayout(::DiagonalLayout{<:AbstractLazyLayout}) = LazyArrowheadLayout()
 symmetriclayout(lay::ArrowheadLayouts) = SymmetricLayout{typeof(lay)}()
 
 MemoryLayout(::Type{<:ArrowheadMatrix{<:Any,<:Any,<:Any,<:Any,<:AbstractVector{D}}}) where D = arrowheadlayout(MemoryLayout(D))
