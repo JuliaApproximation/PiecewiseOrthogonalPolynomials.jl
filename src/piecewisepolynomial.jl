@@ -52,11 +52,18 @@ end
 
 *(P::ApplyPlan, f::AbstractArray) = P.f(P.F * f, P.args...)
 
+size(P::ApplyPlan, k...) = size(P.F, k...)
 
 function _perm_blockvec(X::AbstractMatrix, dims=1)
     @assert dims == 1 || dims == (1,) || dims == 1:1
     BlockVec(transpose(X))
 end
+
+function _inv_perm_blockvec(X::ApplyVector{<:Any,typeof(blockvec)}, dims = 1)
+    @assert dims == 1 || dims == (1,) || dims == 1:1
+    transpose(only(X.args))
+end
+
 function _perm_blockvec(X::AbstractArray{T,3}, dims=1) where T
     @assert dims == 1
     X1 = _perm_blockvec(X[:,:,1])
@@ -72,11 +79,13 @@ function _perm_blockvec(X::AbstractArray{T,4}, dims=(1,2)) where T
     X1 = _perm_blockvec(X[:,:,1,1])
     X2 = _perm_blockvec(X[1,1,:,:])
     ret = PseudoBlockMatrix{T}(undef, (axes(X1,1), axes(X2,1)))
-    for k = 1:size(X,1), j = 1:size(X,2), l = 1:size(X,3), m = 1:size(X,4)
+    for k = axes(X,1), j = axes(X,2), l = axes(X,3), m = axes(X,4)
         ret[Block(k)[j], Block(l)[m]] = X[k,j,l,m]
     end
     ret
 end
+
+\(F::ApplyPlan{<:Any,typeof(_perm_blockvec)}, X::AbstractArray) = F.F \ _inv_perm_blockvec(X)
 
 _interlace_const(n) = ()
 _interlace_const(n, m, ms...) = (m, n, _interlace_const(n, ms...)...)
