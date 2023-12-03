@@ -126,6 +126,18 @@ function \(P::ContinuousPolynomial{0}, C::ContinuousPolynomial{1})
 end
 
 
+function \(D::ContinuousPolynomial{-1}, P::ContinuousPolynomial{0})
+    T = promote_type(eltype(P), eltype(C))
+    @assert P.points == C.points
+    N = length(P.points)
+    R = Jacobi{T}(1,1)\Legendre{T}()
+    ArrowheadMatrix(0Eye{T}(N-2,N-1),
+        (),
+        (SquareEye{T}(N-1),),
+        Fill(R, N-1))
+end
+
+
 
 
 ######
