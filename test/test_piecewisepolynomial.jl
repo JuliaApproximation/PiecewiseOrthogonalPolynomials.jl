@@ -52,9 +52,16 @@ using LazyBandedMatrices: BlockVec
 
     @testset "inv transform" begin
         r = range(-1, 1; length=4)
-        P = PiecewisePolynomial(Chebyshev(), r)
-        pl = plan_transform(P, Block(10))
-        X = randn(10,3)
-        @test pl\(pl*X) ≈ X
+        for P in (PiecewisePolynomial(Chebyshev(), r), PiecewisePolynomial(Legendre(), r))
+            pl = plan_transform(P, Block(10))
+            @test size(pl) == (10,3)
+            X = randn(size(pl))
+            @test pl\(pl*X) ≈ X
+
+            pl = plan_transform(P, Block(10,11))
+            @test size(pl) == (10,3, 11, 3)
+            X = randn(size(pl))
+            @test pl\(pl*X) ≈ X
+        end
     end
 end
