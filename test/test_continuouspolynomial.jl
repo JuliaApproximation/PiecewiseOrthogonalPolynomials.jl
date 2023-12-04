@@ -14,6 +14,11 @@ import ForwardDiff: derivative
         @test (P/P\exp.(x))[0.1] ≈ exp(0.1)
         g,F = ContinuumArrays.plan_grid_transform(P, Block(10))
         @test F * exp.(g) ≈ transform(P , exp)[Block.(1:10)]
+
+        C = ContinuousPolynomial{1}(r)
+        g,F = ContinuumArrays.plan_grid_transform(C, Block(10))
+
+        @test F * exp.(g) ≈ transform(C,exp)[1:82]
     end
 
     @testset "lowering" begin

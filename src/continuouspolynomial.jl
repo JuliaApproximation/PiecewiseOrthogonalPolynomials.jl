@@ -55,6 +55,35 @@ for grd in (:grid, :plotgrid)
     end
 end
 
+struct ContinuousPolynomialTransform{T, Pl<:Plan{T}, RRs} <: Plan{T}
+    legendretransform::Pl
+    R::RRs
+end
+
+function plan_transform(C::ContinuousPolynomial{1,T}, Ns::NTuple{N,Block{1}}, dims=ntuple(identity,Val(N))) where {N,T}
+    P = Legendre{T}()
+    W = Weighted(Jacobi{T}(1,1))
+    R̃ = [[T[1 1; -1 1]/2; Zeros{T}(∞,2)] (P \ W)]
+    ContinuousPolynomialTransform(plan_transform(ContinuousPolynomial{0}(C), Ns, dims).F, 
+                                  InvPlan(map(N -> R̃[1:Int(N),1:Int(N)], Ns), dims))
+end
+
+function *(Pl::ContinuousPolynomialTransform{T}, X::AbstractArray{T}) where T
+    dat = Pl.R * (Pl.legendretransform*X)
+    cfs = T[]
+    M = size(X,2)
+    if size(dat,1) ≥ 1
+        push!(cfs, dat[1,1])
+        for j = 1:M-1
+            isapprox(dat[2,j], dat[1,j+1]; atol=1000*M*eps()) || throw(ArgumentError("Discontinuity in data on order of $(abs(dat[2,j]- dat[1,j+1]))."))
+        end
+        for j = 1:M
+            push!(cfs, dat[2,j])
+        end
+    end
+    append!(cfs, vec(dat[3:end,:]'))
+end
+
 function adaptivetransform_ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiVector) where V
     T = promote_type(V, eltype(f))
     C₀ = ContinuousPolynomial{0,V}(Q)
