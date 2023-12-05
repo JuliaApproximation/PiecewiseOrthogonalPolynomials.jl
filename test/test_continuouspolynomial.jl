@@ -16,9 +16,15 @@ import ForwardDiff: derivative
         @test F * exp.(g) ≈ transform(P , exp)[Block.(1:10)]
 
         C = ContinuousPolynomial{1}(r)
-        g,F = ContinuumArrays.plan_grid_transform(C, Block(10))
+        g,F = ContinuumArrays.plan_grid_transform(C, Block(10));
 
-        @test F * exp.(g) ≈ transform(C,exp)[1:82]
+        @test F * exp.(g) ≈ transform(C,exp)[1:91]
+        @test C[0.1,Block.(1:10)]' * (F * exp.(g)) ≈ exp(0.1)
+
+        (x,y),F = ContinuumArrays.plan_grid_transform(C, Block(10,11));
+        f = (x,y) -> exp(x*cos(y))
+        V = F * f.(x, reshape(y,1,1,size(y)...))
+        @test C[0.1, Block.(1:10)]' * V * C[0.2,Block.(1:11)] ≈ exp(0.1*cos(0.2))
     end
 
     @testset "lowering" begin

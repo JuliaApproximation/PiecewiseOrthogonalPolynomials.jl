@@ -116,11 +116,15 @@ end
 _interlace_const(n) = ()
 _interlace_const(n, m, ms...) = (m, n, _interlace_const(n, ms...)...)
 
+_doubledims(d::Int) = 2d-1
+_doubledims(d::Int, e...) = tuple(_doubledims(d), _doubledims(e...)...)
+
+
 # we transform a piecewise transform into a tensor transform where each even dimensional slice corresponds to a different piece.
 # that is, we don't transform the last dimension.
 function plan_transform(P::PiecewisePolynomial, Ns::NTuple{N,Block{1}}, dims=ntuple(identity,Val(N))) where N
     @assert dims == 1:N || dims == ntuple(identity,Val(N)) || (N == dims == 1)
-    F = plan_transform(P.basis, _interlace_const(length(P.points)-1, Int.(Ns)...), range(1; step=2, length=N))
+    F = plan_transform(P.basis, _interlace_const(length(P.points)-1, Int.(Ns)...), _doubledims(dims...))
     ApplyPlan(_perm_blockvec, F,  (dims,))
 end
 
