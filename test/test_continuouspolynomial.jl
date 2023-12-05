@@ -12,19 +12,23 @@ import ForwardDiff: derivative
         @test P[:,Block.(Base.OneTo(3))] \ x ≈ (P\ x)[Block.(1:3)]
         @test (P/P\x)[0.1] ≈ 0.1
         @test (P/P\exp.(x))[0.1] ≈ exp(0.1)
-        g,F = ContinuumArrays.plan_grid_transform(P, Block(10))
+        g,F = ContinuumArrays.plan_grid_transform(P, Block(10));
         @test F * exp.(g) ≈ transform(P , exp)[Block.(1:10)]
+        @test F \ (F * exp.(g)) ≈ exp.(g)
 
         C = ContinuousPolynomial{1}(r)
         g,F = ContinuumArrays.plan_grid_transform(C, Block(10));
 
         @test F * exp.(g) ≈ transform(C,exp)[1:91]
         @test C[0.1,Block.(1:10)]' * (F * exp.(g)) ≈ exp(0.1)
+        @test F \ (F * exp.(g)) ≈ exp.(g)
 
-        (x,y),F = ContinuumArrays.plan_grid_transform(C, Block(10,11));
         f = (x,y) -> exp(x*cos(y))
-        V = F * f.(x, reshape(y,1,1,size(y)...))
+        (x,y),F = ContinuumArrays.plan_grid_transform(C, Block(10,11));
+        vals = f.(x, reshape(y,1,1,size(y)...))
+        @time V = F * vals;
         @test C[0.1, Block.(1:10)]' * V * C[0.2,Block.(1:11)] ≈ exp(0.1*cos(0.2))
+        @test F \ V ≈ vals
     end
 
     @testset "lowering" begin

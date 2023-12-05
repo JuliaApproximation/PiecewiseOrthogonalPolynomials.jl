@@ -100,6 +100,29 @@ function *(Pl::ContinuousPolynomialTransform{T,<:Any,<:Any,Int}, X::AbstractMatr
     cfs
 end
 
+function \(Pl::ContinuousPolynomialTransform{T,<:Any,<:Any,Int}, cfs::AbstractVector{T}) where T
+    dims = Pl.dims
+    @assert dims == 1
+    
+    M,N = blocksize(cfs,1)+1, size(axes(cfs,1)[Block(1)],1)-1
+    dat = Matrix{T}(undef, M, N)
+    
+    if M ≥ 1
+        dat[1,1] = cfs[Block(1)[1]]
+        for j = 1:N-1
+            dat[2,j] = dat[1,j+1] = cfs[Block(1)[j+1]]
+        end
+        dat[2,end] = cfs[Block(1)[N+1]]
+    end
+
+    for j = 1:N, k = 3:M
+        dat[k,j] = cfs[Block(k-1)[j]]
+    end
+
+    Pl.legendretransform \ (Pl.R \ dat)
+end
+
+
 
 function _contpolyinds2blocks(k, j)
     k == 1 && return Block(1)[j]
@@ -117,6 +140,21 @@ function *(Pl::ContinuousPolynomialTransform{T}, X::AbstractArray{T,4}) where T
         cfs[_contpolyinds2blocks(k,j), _contpolyinds2blocks(l,m)] = dat[k,j,l,m]
     end
     cfs
+end
+
+function \(Pl::ContinuousPolynomialTransform{T}, cfs::AbstractMatrix{T}) where T
+    M,N = blocksize(cfs,1)+1, size(axes(cfs,1)[Block(1)],1)-1
+    O,P = blocksize(cfs,2)+1, size(axes(cfs,2)[Block(1)],1)-1
+
+    dat = Array{T}(undef,  M, N, O, P)
+    dims = Pl.dims
+    @assert dims == (1,2)
+
+    for k = 1:M, j = 1:N, l = 1:O, m = 1:P
+        dat[k,j,l,m] = cfs[_contpolyinds2blocks(k,j), _contpolyinds2blocks(l,m)]
+    end
+
+    Pl.legendretransform \ (Pl.R \ dat)
 end
 
 
