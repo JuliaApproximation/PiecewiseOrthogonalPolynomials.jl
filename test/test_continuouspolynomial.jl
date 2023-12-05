@@ -173,4 +173,35 @@ import ForwardDiff: derivative
         C = ContinuousPolynomial{1}(r)
         @test sum(expand(P, exp)) ≈ sum(expand(C, exp)) ≈ ℯ - 1/ℯ
     end
+
+    @testset "f_xy example" begin
+        r = range(-1,1; length=3)
+        P = ContinuousPolynomial{0}(r)
+        M,N = Block(80),Block(81)
+        ((x,y),pl) = plan_grid_transform(P, (M,N))
+        f = (x,y) -> exp(x*cos(10y))
+        F = f.(x, reshape(y, 1, 1, size(y)...))
+        X = pl * F
+        @test P[0.1,Block(1):M]' * X * P[0.2,Block(1):N] ≈ f(0.1,0.2)
+        @test pl \ X ≈ F
+
+        C = ContinuousPolynomial{1}(r)
+        pl_C = plan_transform(C, (M-1,N-1))
+        F_C = f.(x, reshape(y, 1, 1, size(y,1),:))
+        X_C = pl_C * F_C
+
+        @test C[0.1,Block(1):M-1]' * X_C * C[0.2,Block(1):N-1] ≈ f(0.1,0.2)
+
+        D_x = (P \ diff(C))[Block(1):M, Block(1):M-1]
+        D_y = (P \ diff(C))[Block(1):N, Block(1):N-1]
+
+        f_xy = (x,y) -> -10sin(10y)*exp(x*cos(10y)) - 10cos(10y)*x*sin(10y)*exp(x*cos(10y))
+        @test P[0.1,Block(1):M]'*(D_x*X_C*D_y')*P[0.2,Block(1):N] ≈ f_xy(0.1,0.2)
+
+        # We can transform back to get the values on a large grid:
+
+        F_xy = pl \ (D_x*X_C*D_y')
+
+        @test F_xy ≈ f_xy.(x, reshape(y,1,1,size(y)...))
+    end
 end

@@ -5,8 +5,8 @@
 ###
 
 
-using PiecewiseOrthogonalPolynomials, CairoMakie, Test
-using PiecewiseOrthogonalPolynomials: plan_grid_transform
+using PiecewiseOrthogonalPolynomials, Plots, Test
+using PiecewiseOrthogonalPolynomials: plan_grid_transform, plan_transform
 
 r = range(-1,1; length=3)
 P = ContinuousPolynomial{0}(r)
@@ -23,12 +23,12 @@ M,N = Block(80),Block(81)
 # a 4-tensor. The way to do this is as follows:
 
 f = (x,y) -> exp(x*cos(10y))
-F = f.(x, reshape(y, 1, 1, size(y,1),:))
+F = f.(x, reshape(y, 1, 1, size(y)...))
 
 # F contains our function samples. to plot we need to reduce back to vector/matrices.
 # But an issue is that the sample points are in the reverse order. Thus we need to do
 # some reordering:
-surface(vec(x[end:-1:1,:]), vec(y[end:-1:1,:]), reshape(F[end:-1:1,:,end:-1:1,:], length(x), length(y)))
+surface(vec(x[end:-1:1,:]), vec(y[end:-1:1,:]), reshape(F[end:-1:1,:,end:-1:1,:], length(x), length(y))')
 
 
 # We can now transform the samples to coefficient space:
@@ -46,17 +46,18 @@ X = pl * F
 C = ContinuousPolynomial{1}(r)
 
 # Compute coefficients of f in tensor product of C^(1)
+# This has one less block so we decrease M and N by one:
 
-(x_C,y_C),pl_C = plan_grid_transform(C, (M,N))
-F_C = f.(x_C, reshape(y_C, 1, 1, size(y_C,1),:))
+pl_C = plan_transform(C, (M-1,N-1))
+F_C = f.(x, reshape(y, 1, 1, size(y,1),:))
 X_C = pl_C * F_C
 
-@test C[0.1,Block(1):M]' * X_C * C[0.2,Block(1):N] ≈ f(0.1,0.2)
+@test C[0.1,Block(1):M-1]' * X_C * C[0.2,Block(1):N-1] ≈ f(0.1,0.2)
 
 # Make the 1D differentiation matrices from C to P:
 
-D_x = (P \ diff(C))[Block(1):M, Block(1):M]
-D_y = (P \ diff(C))[Block(1):N, Block(1):N]
+D_x = (P \ diff(C))[Block(1):M, Block(1):M-1]
+D_y = (P \ diff(C))[Block(1):N, Block(1):N-1]
 
 
 # We now compare this to an analytical derivative at a poiunt
@@ -70,5 +71,5 @@ F_xy = pl \ (D_x*X_C*D_y')
 
 @test F_xy ≈ f_xy.(x, reshape(y,1,1,size(y)...))
 
-surface(vec(x[end:-1:1,:]), vec(y[end:-1:1,:]), reshape(F_xy[end:-1:1,:,end:-1:1,:], length(x), length(y)))
+surface(vec(x[end:-1:1,:]), vec(y[end:-1:1,:]), reshape(F_xy[end:-1:1,:,end:-1:1,:], length(x), length(y))')
 
