@@ -12,6 +12,7 @@ import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec, BandedLazyLayouts, Ab
 import Base: size, axes, getindex, +, -, *, /, ==, \, OneTo, oneto, replace_in_print_matrix, copy, diff, getproperty, adjoint, transpose, tail, _sum, inv
 import LinearAlgebra: BlasInt
 import MatrixFactorizations: reversecholcopy
+import FillArrays: SquareEye
 
 export PiecewisePolynomial, ContinuousPolynomial, DirichletPolynomial, Derivative, Block, weaklaplacian, grammatrix
 

@@ -212,7 +212,9 @@ using ContinuumArrays: plan_grid_transform
         C = ContinuousPolynomial{1}(r)
         P = ContinuousPolynomial{0}(r)
         H = ContinuousPolynomial{-1}(r)
-        H\P
+
+        f = expand(P, exp)
+        @test (H/H\f)[0.1] ≈ exp(0.1)
         diff(P)
     end
 end

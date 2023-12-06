@@ -224,15 +224,15 @@ function \(P::ContinuousPolynomial{0}, C::ContinuousPolynomial{1})
 end
 
 
-function \(D::ContinuousPolynomial{-1}, P::ContinuousPolynomial{0})
-    T = promote_type(eltype(P), eltype(C))
-    @assert P.points == C.points
+@simplify function \(D::ContinuousPolynomial{-1}, P::ContinuousPolynomial{0})
+    T = promote_type(eltype(D), eltype(P))
+    @assert D.points == P.points
     N = length(P.points)
     R = Jacobi{T}(1,1)\Legendre{T}()
     ArrowheadMatrix(0Eye{T}(N-2,N-1),
         (),
         (SquareEye{T}(N-1),),
-        Fill(R, N-1))
+        Fill(R[:,2:end], N-1))
 end
 
 
@@ -311,6 +311,17 @@ function diff(C::ContinuousPolynomial{1,T}; dims=1) where T
                         [Diagonal(2s̃ * (-convert(T, 2):-2:-∞)) for s̃ in s])
     ApplyQuasiMatrix(*, P, D)
 end
+
+# function diff(P::ContinuousPolynomial{0,T}; dims=1) where T
+#     r = P.points
+#     N = length(r)
+#     s = one(T) ./ (r[2:end]-r[1:end-1])
+    
+#     ArrowheadMatrix(0Eye{T}(N-2,N-1),
+#         (),
+#         (SquareEye{T}(N-1),),
+#         Fill(R[:,2:end], N-1))
+# end
 
 
 function weaklaplacian(C::ContinuousPolynomial{1,T,<:AbstractRange}) where T
