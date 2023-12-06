@@ -1,5 +1,5 @@
-using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, Test
-using PiecewiseOrthogonalPolynomials: ArrowheadMatrix
+using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, ContinuumArrays, Test
+using PiecewiseOrthogonalPolynomials: ArrowheadMatrix, plan_grid_transform
 
 @testset "DirichletPolynomial" begin
     Q = DirichletPolynomial(range(-1,1; length=4))
@@ -42,6 +42,7 @@ using PiecewiseOrthogonalPolynomials: ArrowheadMatrix
     end
 
     @testset "plot" begin
+        Q = DirichletPolynomial(range(-1,1; length=4))
         @test ClassicalOrthogonalPolynomials.grid(Q, 5) == ClassicalOrthogonalPolynomials.grid(Q, Block(2))
         @test ClassicalOrthogonalPolynomials.plotgrid(Q, 5) == ClassicalOrthogonalPolynomials.plotgrid(Q, Block(2))
     end
@@ -49,5 +50,23 @@ using PiecewiseOrthogonalPolynomials: ArrowheadMatrix
     @testset "expand" begin
         @test expand(sin.(f))[0.1] ≈ sin(f[0.1])
         @test expand(exp.(f))[0.1] ≈ exp(f[0.1])
+    end
+
+    @testset "transform" begin
+        r = range(-1, 1; length=3)
+        Q = DirichletPolynomial(r)
+
+        x,F = plan_grid_transform(Q, Block(20));
+        f = x -> (1-x^2) * exp(x)
+        @test F*f.(x) ≈ transform(Q,f)[1:39]
+        @test Q[0.1,1:39]' * (F*f.(x)) ≈ f(0.1)
+        @test F\ (F*f.(x)) ≈ f.(x)
+
+        f = (x,y) -> (1-x^2)*(1-y^2)*exp(x*cos(y))
+        (x,y),F = ContinuumArrays.plan_grid_transform(Q, Block(20,21));
+        vals = f.(x, reshape(y,1,1,size(y)...))
+        @time V = F * vals;
+        @test Q[0.1, Block.(1:20)]' * V * Q[0.2,Block.(1:21)] ≈ f(0.1,0.2)
+        @test F \ V ≈ vals
     end
 end
