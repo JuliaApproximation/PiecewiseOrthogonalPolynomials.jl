@@ -48,11 +48,119 @@ function \(P::ContinuousPolynomial, Q::DirichletPolynomial)
     (P \ C) * (C \ Q)
 end
 
+###
+# transforms
+###
+
 
 function adaptivetransform_ldiv(Q::DirichletPolynomial{V}, f::AbstractQuasiVector) where V
     C = ContinuousPolynomial{1}(Q)
     (Q \ C) * (C \ f)
 end
+
+struct DirichletPolynomialTransform{T, Pl<:Plan{T}, RRs, Dims} <: Plan{T}
+    legendretransform::Pl
+    R::RRs
+    dims::Dims
+end
+
+DirichletPolynomialTransform(pl::ContinuousPolynomialTransform) =
+    DirichletPolynomialTransform(pl.legendretransform, pl.R, pl.dims)
+
+plan_transform(C::DirichletPolynomial{T}, Ns::NTuple{N,Block{1}}, dims=ntuple(identity,Val(N))) where {N,T} =
+    DirichletPolynomialTransform(plan_transform(ContinuousPolynomial{1}(C), Ns, dims))
+
+_tensorsize2dirichletblocks() = ()
+_tensorsize2dirichletblocks(M,N, Ns...) = (Vcat(N-1, Fill(N, M-2)), _tensorsize2dirichletblocks(Ns...)...)
+    
+    
+function *(Pl::DirichletPolynomialTransform{T,<:Any,<:Any,Int}, X::AbstractMatrix{T}) where T
+    dat = Pl.R * (Pl.legendretransform*X)
+    cfs = PseudoBlockArray{T}(undef,  _tensorsize2dirichletblocks(size(X)...)...)
+    dims = Pl.dims
+    @assert dims == 1
+
+    M,N = size(X,1), size(X,2)
+    if size(dat,1) ≥ 1
+        for j = 1:N-1
+            cfs[Block(1)[j]] = dat[2,j]
+        end
+    end
+    cfs[Block.(2:M-1)] .= vec(dat[3:end,:]')
+    cfs
+end
+
+function \(Pl::DirichletPolynomialTransform{T,<:Any,<:Any,Int}, cfs::AbstractVector{T}) where T
+    dims = Pl.dims
+    @assert dims == 1
+    
+    M,N = blocksize(cfs,1)+1, size(axes(cfs,1)[Block(1)],1)+1
+    dat = Matrix{T}(undef, M, N)
+    
+    if M ≥ 1
+        dat[1,1] = zero(T)
+        for j = 1:N-1
+            dat[2,j] = dat[1,j+1] = cfs[Block(1)[j]]
+        end
+        dat[2,end] = zero(T)
+    end
+
+    for j = 1:N, k = 3:M
+        dat[k,j] = cfs[Block(k-1)[j]]
+    end
+
+    Pl.legendretransform \ (Pl.R \ dat)
+end
+    
+    
+    
+function _dirichletpolyinds2blocks(k, j)
+    k == 1 && return Block(1)[j-1]
+    k == 2 && return Block(1)[j]
+    Block(k-1)[j]
+end
+function *(Pl::DirichletPolynomialTransform{T}, X::AbstractArray{T,4}) where T
+    dat = Pl.R * (Pl.legendretransform*X)
+    cfs = PseudoBlockArray{T}(undef,  _tensorsize2dirichletblocks(size(X)...)...)
+    dims = Pl.dims
+    @assert dims == (1,2)
+
+    M,N,O,P = size(X)
+    for k = 1:M, j = 1:N, l = 1:O, m = 1:P
+        k == j == 1 && continue
+        k == 2 && j == N && continue
+        l == m == 1 && continue
+        l == 2 && m == P && continue
+        cfs[_dirichletpolyinds2blocks(k,j), _dirichletpolyinds2blocks(l,m)] = dat[k,j,l,m]
+    end
+    cfs
+end
+    
+function \(Pl::DirichletPolynomialTransform{T}, cfs::AbstractMatrix{T}) where T
+    M,N = blocksize(cfs,1)+1, size(axes(cfs,1)[Block(1)],1)+1
+    O,P = blocksize(cfs,2)+1, size(axes(cfs,2)[Block(1)],1)+1
+
+    dat = Array{T}(undef,  M, N, O, P)
+    dims = Pl.dims
+    @assert dims == (1,2)
+
+    for k = 1:M, j = 1:N, l = 1:O, m = 1:P
+        if k == j == 1 ||
+           (k == 2 && j == N) ||
+            l == m == 1 ||
+           (l == 2 && m == P)
+           dat[k,j,l,m] = zero(T)
+        else
+            dat[k,j,l,m] = cfs[_dirichletpolyinds2blocks(k,j), _dirichletpolyinds2blocks(l,m)]
+        end
+    end
+
+    Pl.legendretransform \ (Pl.R \ dat)
+end
+    
+###
+# weaklaplacian
+###    
 
 function weaklaplacian(C::DirichletPolynomial{T,<:AbstractRange}) where T
     r = C.points
@@ -102,8 +210,8 @@ end
 
 for grd in (:grid, :plotgrid)
     @eval begin
-        $grd(C::DirichletPolynomial, n::Integer) = $grd(PiecewisePolynomial(C), n)
-        $grd(C::DirichletPolynomial, n::Block{1}) = $grd(PiecewisePolynomial(C), n)
+        $grd(C::DirichletPolynomial, n::Integer) = $grd(ContinuousPolynomial{1}(C.points), n)
+        $grd(C::DirichletPolynomial, n::Block{1}) = $grd(ContinuousPolynomial{1}(C.points), n)
     end
 end
 

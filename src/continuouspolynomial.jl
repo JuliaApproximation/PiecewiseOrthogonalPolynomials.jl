@@ -66,9 +66,112 @@ plan_transform(P::ContinuousPolynomial{0}, szs::NTuple{N,Union{Int,Block{1}}}, d
 for grd in (:grid, :plotgrid)
     @eval begin
         $grd(C::ContinuousPolynomial, n::Block{1}) = $grd(PiecewisePolynomial(C), n) 
-        $grd(C::ContinuousPolynomial, n::Int) = $grd(PiecewisePolynomial(C), n) 
+        $grd(C::ContinuousPolynomial, n::Int) = $grd(C, findblock(axes(C,2), n))
     end
 end
+
+struct ContinuousPolynomialTransform{T, Pl<:Plan{T}, RRs, Dims} <: Plan{T}
+    legendretransform::Pl
+    R::RRs
+    dims::Dims
+end
+
+
+
+
+function plan_transform(C::ContinuousPolynomial{1,T}, Ns::NTuple{N,Block{1}}, dims=ntuple(identity,Val(N))) where {N,T}
+    P = Legendre{T}()
+    W = Weighted(Jacobi{T}(1,1))
+    # TODO: this is unnecessarily not triangular which makes it much slower than necessary and prevents in-place.
+    # However, the speed of the Legendre transform will far exceed this so its not high priority.
+    # Probably using Ultraspherical(-1/2) would be better.
+    R̃ = [[T[1 1; -1 1]/2; Zeros{T}(∞,2)] (P \ W)]
+    ContinuousPolynomialTransform(plan_transform(ContinuousPolynomial{0}(C), Ns .+ 1, dims).F, 
+                                  InvPlan(map(N -> R̃[1:Int(N),1:Int(N)], Ns .+ 1), _doubledims(dims...)),
+                                  dims)
+end
+
+_tensorsize2contblocks() = ()
+_tensorsize2contblocks(M,N, Ns...) = (Vcat(N+1, Fill(N, M-2)), _tensorsize2contblocks(Ns...)...)
+
+
+function *(Pl::ContinuousPolynomialTransform{T,<:Any,<:Any,Int}, X::AbstractMatrix{T}) where T
+    dat = Pl.R * (Pl.legendretransform*X)
+    cfs = PseudoBlockArray{T}(undef,  _tensorsize2contblocks(size(X)...)...)
+    dims = Pl.dims
+    @assert dims == 1
+
+    M,N = size(X,1), size(X,2)
+    if size(dat,1) ≥ 1
+        cfs[Block(1)[1]] = dat[1,1]
+        for j = 1:N-1
+            isapprox(dat[2,j], dat[1,j+1]; atol=1000*M*eps()) || throw(ArgumentError("Discontinuity in data on order of $(abs(dat[2,j]- dat[1,j+1]))."))
+        end
+        for j = 1:N
+            cfs[Block(1)[j+1]] = dat[2,j]
+        end
+    end
+    cfs[Block.(2:M-1)] .= vec(dat[3:end,:]')
+    cfs
+end
+
+function \(Pl::ContinuousPolynomialTransform{T,<:Any,<:Any,Int}, cfs::AbstractVector{T}) where T
+    dims = Pl.dims
+    @assert dims == 1
+    
+    M,N = blocksize(cfs,1)+1, size(axes(cfs,1)[Block(1)],1)-1
+    dat = Matrix{T}(undef, M, N)
+    
+    if M ≥ 1
+        dat[1,1] = cfs[Block(1)[1]]
+        for j = 1:N-1
+            dat[2,j] = dat[1,j+1] = cfs[Block(1)[j+1]]
+        end
+        dat[2,end] = cfs[Block(1)[N+1]]
+    end
+
+    for j = 1:N, k = 3:M
+        dat[k,j] = cfs[Block(k-1)[j]]
+    end
+
+    Pl.legendretransform \ (Pl.R \ dat)
+end
+
+
+
+function _contpolyinds2blocks(k, j)
+    k == 1 && return Block(1)[j]
+    k == 2 && return Block(1)[j+1]
+    Block(k-1)[j]
+end
+function *(Pl::ContinuousPolynomialTransform{T}, X::AbstractArray{T,4}) where T
+    dat = Pl.R * (Pl.legendretransform*X)
+    cfs = PseudoBlockArray{T}(undef,  _tensorsize2contblocks(size(X)...)...)
+    dims = Pl.dims
+    @assert dims == (1,2)
+
+    M,N,O,P = size(X)
+    for k = 1:M, j = 1:N, l = 1:O, m = 1:P
+        cfs[_contpolyinds2blocks(k,j), _contpolyinds2blocks(l,m)] = dat[k,j,l,m]
+    end
+    cfs
+end
+
+function \(Pl::ContinuousPolynomialTransform{T}, cfs::AbstractMatrix{T}) where T
+    M,N = blocksize(cfs,1)+1, size(axes(cfs,1)[Block(1)],1)-1
+    O,P = blocksize(cfs,2)+1, size(axes(cfs,2)[Block(1)],1)-1
+
+    dat = Array{T}(undef,  M, N, O, P)
+    dims = Pl.dims
+    @assert dims == (1,2)
+
+    for k = 1:M, j = 1:N, l = 1:O, m = 1:P
+        dat[k,j,l,m] = cfs[_contpolyinds2blocks(k,j), _contpolyinds2blocks(l,m)]
+    end
+
+    Pl.legendretransform \ (Pl.R \ dat)
+end
+
 
 function adaptivetransform_ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiVector) where V
     T = promote_type(V, eltype(f))
@@ -103,12 +206,7 @@ end
 adaptivetransform_ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiMatrix) where V =
     BlockBroadcastArray(hcat, (Q \ f[:,j] for j = axes(f,2))...)
 
-function grid(V::SubQuasiArray{T,2,<:ContinuousPolynomial{1},<:Tuple{Inclusion,BlockSlice}}) where {T}
-    P = parent(V)
-    _, JR = parentindices(V)
-    pts = P.points
-    grid(view(PiecewisePolynomial(Weighted(Jacobi{T}(1, 1)), pts), :, JR))
-end
+grid(P::ContinuousPolynomial{1}, M::Block{1}) = grid(ContinuousPolynomial{0}(P), M + 1)
 
 #######
 # Conversion

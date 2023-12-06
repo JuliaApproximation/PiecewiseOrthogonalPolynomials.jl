@@ -52,11 +52,29 @@ end
 
 *(P::ApplyPlan, f::AbstractArray) = P.f(P.F * f, P.args...)
 
+size(P::ApplyPlan, k...) = size(P.F, k...)
 
+"""
+    _perm_blockvec
+
+takes a matrix and constructs a blocked-vector where the different
+rows correspond to different blocks.
+"""
 function _perm_blockvec(X::AbstractMatrix, dims=1)
     @assert dims == 1 || dims == (1,) || dims == 1:1
     BlockVec(transpose(X))
 end
+
+"""
+    _inv_perm_blockvec
+
+is the inverse of _perm_blockvec
+"""
+function _inv_perm_blockvec(X::ApplyVector{<:Any,typeof(blockvec)}, dims = 1)
+    @assert dims == 1 || dims == (1,) || dims == 1:1
+    transpose(only(X.args))
+end
+
 function _perm_blockvec(X::AbstractArray{T,3}, dims=1) where T
     @assert dims == 1
     X1 = _perm_blockvec(X[:,:,1])
@@ -67,25 +85,46 @@ function _perm_blockvec(X::AbstractArray{T,3}, dims=1) where T
     end
     ret
 end
+
+
+
+
 function _perm_blockvec(X::AbstractArray{T,4}, dims=(1,2)) where T
     @assert dims == 1:2 || dims == (1,2)
     X1 = _perm_blockvec(X[:,:,1,1])
     X2 = _perm_blockvec(X[1,1,:,:])
     ret = PseudoBlockMatrix{T}(undef, (axes(X1,1), axes(X2,1)))
-    for k = 1:size(X,1), j = 1:size(X,2), l = 1:size(X,3), m = 1:size(X,4)
+    for k = axes(X,1), j = axes(X,2), l = axes(X,3), m = axes(X,4)
         ret[Block(k)[j], Block(l)[m]] = X[k,j,l,m]
     end
     ret
 end
 
+function _inv_perm_blockvec(X::AbstractMatrix{T}, dims=(1,2)) where T
+    @assert dims == 1:2 || dims == (1,2)
+    M,N = blocksize(X)
+    m,n = size(X)
+    ret = Array{T}(undef, M, m ÷ M, N, n ÷ N)
+    for k = axes(ret,1), j = axes(ret,2), l = axes(ret,3), m = axes(ret,4)
+        ret[k,j,l,m] = X[Block(k)[j], Block(l)[m]]
+    end
+    ret
+end
+
+\(F::ApplyPlan{<:Any,typeof(_perm_blockvec)}, X::AbstractArray) = F.F \ _inv_perm_blockvec(X, F.args...)
+
 _interlace_const(n) = ()
 _interlace_const(n, m, ms...) = (m, n, _interlace_const(n, ms...)...)
+
+_doubledims(d::Int) = 2d-1
+_doubledims(d::Int, e...) = tuple(_doubledims(d), _doubledims(e...)...)
+
 
 # we transform a piecewise transform into a tensor transform where each even dimensional slice corresponds to a different piece.
 # that is, we don't transform the last dimension.
 function plan_transform(P::PiecewisePolynomial, Ns::NTuple{N,Block{1}}, dims=ntuple(identity,Val(N))) where N
     @assert dims == 1:N || dims == ntuple(identity,Val(N)) || (N == dims == 1)
-    F = plan_transform(P.basis, _interlace_const(length(P.points)-1, Int.(Ns)...), range(1; step=2, length=N))
+    F = plan_transform(P.basis, _interlace_const(length(P.points)-1, Int.(Ns)...), _doubledims(dims...))
     ApplyPlan(_perm_blockvec, F,  (dims,))
 end
 
