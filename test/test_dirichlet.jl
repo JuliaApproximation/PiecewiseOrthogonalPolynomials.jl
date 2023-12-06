@@ -42,6 +42,7 @@ using PiecewiseOrthogonalPolynomials: ArrowheadMatrix, plan_grid_transform
     end
 
     @testset "plot" begin
+        Q = DirichletPolynomial(range(-1,1; length=4))
         @test ClassicalOrthogonalPolynomials.grid(Q, 5) == ClassicalOrthogonalPolynomials.grid(Q, Block(2))
         @test ClassicalOrthogonalPolynomials.plotgrid(Q, 5) == ClassicalOrthogonalPolynomials.plotgrid(Q, Block(2))
     end

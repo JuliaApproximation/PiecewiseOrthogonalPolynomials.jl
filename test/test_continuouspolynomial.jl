@@ -1,13 +1,15 @@
 using PiecewiseOrthogonalPolynomials, StaticArrays, InfiniteArrays, ContinuumArrays, Test
-import LazyBandedMatrices: MemoryLayout, AbstractBandedBlockBandedLayout, BlockVec
-import ForwardDiff: derivative
+using LazyBandedMatrices: MemoryLayout, AbstractBandedBlockBandedLayout, BlockVec
+using ForwardDiff: derivative
+using ContinuumArrays: plan_grid_transform
 
 @testset "ContinuousPolynomial" begin
     @testset "transform" begin
         r = range(-1, 1; length=10)
         P = ContinuousPolynomial{0}(r)
-        @test_broken grid(P[:,Block.(OneTo(3))]) == grid(PiecewisePolynomial(P)[:,Block.(OneTo(3))]) == grid(ContinuousPolynomial{1}(r)[:,Block.(OneTo(3))])
-        @test grid(P[:,1:5]) == grid(PiecewisePolynomial(P)[:,1:5]) == grid(ContinuousPolynomial{1}(r)[:,1:5])
+        @test grid(P[:,Block.(Base.OneTo(3))]) == grid(PiecewisePolynomial(P)[:,Block.(Base.OneTo(3))]) == grid(ContinuousPolynomial{1}(r)[:,Block.(Base.OneTo(2))])
+        @test grid(P[:,1:5]) == grid(PiecewisePolynomial(P)[:,1:5])
+        @test grid(P[:,1:12]) == grid(PiecewisePolynomial(P)[:,1:12]) == grid(ContinuousPolynomial{1}(r)[:,1:5])
         x = axes(P,1)
         @test P[:,Block.(Base.OneTo(3))] \ x ≈ (P\ x)[Block.(1:3)]
         @test (P/P\x)[0.1] ≈ 0.1

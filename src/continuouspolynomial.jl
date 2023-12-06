@@ -51,7 +51,7 @@ plan_transform(P::ContinuousPolynomial{0}, szs::NTuple{N,Union{Int,Block{1}}}, d
 for grd in (:grid, :plotgrid)
     @eval begin
         $grd(C::ContinuousPolynomial, n::Block{1}) = $grd(PiecewisePolynomial(C), n) 
-        $grd(C::ContinuousPolynomial, n::Int) = $grd(PiecewisePolynomial(C), n) 
+        $grd(C::ContinuousPolynomial, n::Int) = $grd(C, findblock(axes(C,2), n))
     end
 end
 
