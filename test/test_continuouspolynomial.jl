@@ -218,6 +218,9 @@ using ContinuumArrays: plan_grid_transform
 
         f = expand(P, exp)
         @test (H/H\f)[0.1] ≈ exp(0.1)
-        diff(P)
+        @test diff(f)[0.1] ≈ exp(0.1)
+
+        f = expand(C,exp)
+        @test diff(diff(f))[0.1] ≈ exp(0.1)
     end
 end

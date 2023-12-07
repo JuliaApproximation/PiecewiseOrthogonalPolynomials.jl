@@ -1,3 +1,9 @@
+"""
+   ContinuousPolynomial{0}  is piecewise Legendre
+   ContinuousPolynomial{1}  is hat functions in first block and rest are bubble functions Ultraspherical(-1/2)
+   ContinuousPolynomial{-1} is delta functions (non-boundary) and rest are Ultraspherical(1/2) == diff(Legendre())[:,2:end] in the interior of the elements.
+   Between elements we are consistent with differentiating Legendre: we have delta functions of (-1)^k on the left and -1 on the right.
+"""
 struct ContinuousPolynomial{order,T,P<:AbstractVector} <: AbstractPiecewisePolynomial{order,T,P}
     points::P
 end
@@ -53,7 +59,7 @@ function getindex(P::ContinuousPolynomial{-1,T}, x::Number, Kk::BlockIndex{1}) w
         b = searchsortedlast(P.points, x)
         if b == k
             α, β = convert(T, P.points[b]), convert(T, P.points[b+1])
-            Jacobi{T}(1, 1)[affine(α.. β, ChebyshevInterval{real(T)}())[x], Int(K)-1]
+            Ultraspherical{T}(3one(real(T))/2)[affine(α.. β, ChebyshevInterval{real(T)}())[x], Int(K)-1]
         else
             zero(T)
         end
@@ -233,9 +239,12 @@ end
     T = promote_type(eltype(D), eltype(P))
     @assert D.points == P.points
     N = length(P.points)
-    R = Jacobi{T}(1,1)\Legendre{T}()
-    ArrowheadMatrix(0Eye{T}(N-2,N-1),
-        (),
+    R = Ultraspherical{T}(3one(T)/2)\Legendre{T}()
+
+    # The basis for D is defined in each element a..b as diff(legendre(a..b)) with delta functions. But note that
+    # the delta functions don't change! We need to kill off the deltas in conversion.
+    ArrowheadMatrix(_BandedMatrix(Vcat(Fill(-one(T),1,N-1), Fill(one(T),1,N-1)), N-2, 0, 1),
+        (_BandedMatrix(Ones{T}(2,N-1), N-2, 0, 1),),
         (SquareEye{T}(N-1),),
         Fill(R[:,2:end], N-1))
 end
@@ -307,7 +316,7 @@ end
 #####
 
 function diff(C::ContinuousPolynomial{1,T}; dims=1) where T
-    # Legendre() \ (D*Weighted(Jacobi(1,1)))
+    # Legendre() \ (D*Ultraspherical(3/2)))
     r = C.points
     N = length(r)
     s = one(T) ./ (r[2:end]-r[1:end-1])
@@ -324,16 +333,16 @@ function diff(C::ContinuousPolynomial{1,T,<:AbstractRange}; dims=1) where T
                                                  Fill(-2s*Eye{T}(∞), N-1))
 end
 
-# function diff(P::ContinuousPolynomial{0,T}; dims=1) where T
-#     r = P.points
-#     N = length(r)
-#     s = one(T) ./ (r[2:end]-r[1:end-1])
+function diff(P::ContinuousPolynomial{0,T,<:AbstractRange}; dims=1) where T
+    r = P.points
+    N = length(r)
+    s = step(r)
     
-#     ArrowheadMatrix(0Eye{T}(N-2,N-1),
-#         (),
-#         (SquareEye{T}(N-1),),
-#         Fill(R[:,2:end], N-1))
-# end
+    ContinuousPolynomial{-1}(r) * ArrowheadMatrix(_BandedMatrix(Vcat(Fill(one(T),1,N-1), Fill(-one(T),1,N-1)), N-2, 0, 1),
+        (),
+        (),
+        Fill(Eye{T}(∞) * (2/s), N-1))
+end
 
 
 function weaklaplacian(C::ContinuousPolynomial{1,T,<:AbstractRange}) where T
