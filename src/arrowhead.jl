@@ -114,6 +114,8 @@ arrowheadlayout(::DiagonalLayout{<:AbstractLazyLayout}) = LazyArrowheadLayout()
 symmetriclayout(lay::ArrowheadLayouts) = SymmetricLayout{typeof(lay)}()
 
 MemoryLayout(::Type{<:ArrowheadMatrix{<:Any,<:Any,<:Any,<:Any,<:AbstractVector{D}}}) where D = arrowheadlayout(MemoryLayout(D))
+# Hack since ∞ diagonal fill is only DiagonalLayout{FillLayout}
+MemoryLayout(::Type{<:ArrowheadMatrix{<:Any,<:Any,<:Any,<:Any,<:AbstractVector{<:Diagonal{<:Any,<:AbstractFill{<:Any,1,<:Tuple{OneToInf}}}}}}) = LazyArrowheadLayout()
 
 sublayout(::ArrowheadLayouts,
           ::Type{<:NTuple{2,BlockSlice{<:BlockRange{1, Tuple{OneTo{Int}}}}}}) = ArrowheadLayout()
