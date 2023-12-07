@@ -14,6 +14,9 @@ axes(B::ContinuousPolynomial{0}) = axes(PiecewisePolynomial(B))
 axes(B::ContinuousPolynomial{1}) =
     (Inclusion(first(B.points) .. last(B.points)), blockedrange(Vcat(length(B.points), Fill(length(B.points) - 1, ∞))))
 
+show(io::IO, Q::ContinuousPolynomial{λ}) where λ = summary(io, Q)
+summary(io::IO, Q::ContinuousPolynomial{λ}) where λ = print(io, "ContinuousPolynomial{$λ}($(Q.points))")
+
 ==(P::PiecewisePolynomial, C::ContinuousPolynomial{0}) = P == PiecewisePolynomial(C)
 ==(C::ContinuousPolynomial{0}, P::PiecewisePolynomial) = PiecewisePolynomial(C) == P
 ==(::PiecewisePolynomial, ::ContinuousPolynomial{1}) = false

@@ -9,7 +9,7 @@ import ClassicalOrthogonalPolynomials: grid, plotgrid, ldiv, pad, adaptivetransf
 import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBasisLayout, MemoryLayout, layout_broadcasted, ExpansionLayout, basis, plan_transform, plan_grid_transform, grammatrix, weaklaplacian, MulPlan, InvPlan
 import LazyArrays: paddeddata
 import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec, BandedLazyLayouts, AbstractLazyBandedBlockBandedLayout, UpperOrLowerTriangular
-import Base: size, axes, getindex, +, -, *, /, ==, \, OneTo, oneto, replace_in_print_matrix, copy, diff, getproperty, adjoint, transpose, tail, _sum, inv
+import Base: size, axes, getindex, +, -, *, /, ==, \, OneTo, oneto, replace_in_print_matrix, copy, diff, getproperty, adjoint, transpose, tail, _sum, inv, show, summary
 import LinearAlgebra: BlasInt
 import InfiniteArrays: OneToInf
 import FillArrays: AbstractFill

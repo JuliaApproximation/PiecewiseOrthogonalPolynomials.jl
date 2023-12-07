@@ -11,6 +11,10 @@ PiecewisePolynomial(P::DirichletPolynomial{T}) where {T} = PiecewisePolynomial(C
 
 axes(B::DirichletPolynomial) = (Inclusion(first(B.points) .. last(B.points)), blockedrange(Vcat(length(B.points)-2, Fill(length(B.points) - 1, ∞))))
 
+show(io::IO, Q::DirichletPolynomial) = summary(io, Q)
+summary(io::IO, Q::DirichletPolynomial) = print(io, "DirichletPolynomial($(Q.points))")
+
+
 ==(P::DirichletPolynomial, C::DirichletPolynomial) = P.points == C.points
 ==(P::PiecewisePolynomial, C::DirichletPolynomial) = false
 ==(C::DirichletPolynomial, P::PiecewisePolynomial) = false
@@ -170,7 +174,7 @@ function weaklaplacian(C::DirichletPolynomial{T,<:AbstractRange}) where T
     t1 = Fill(-2si, N-2)
     t2 = Fill(si, N-3)
     Symmetric(ArrowheadMatrix(LazyBandedMatrices.Bidiagonal(t1, t2, :U), (), (),
-        Fill(Diagonal(convert(T, -16) .* (1:∞) .^ 2 ./ (s .* ((2:2:∞) .+ 1))), N-1)))
+        Fill(Diagonal(convert(T, -4) ./ (s*(convert(T,3):2:∞))), N-1)))
 end
 
 function grammatrix(Q::DirichletPolynomial{T, <:AbstractRange}) where T
@@ -178,15 +182,15 @@ function grammatrix(Q::DirichletPolynomial{T, <:AbstractRange}) where T
 
     N = length(r) - 1
     h = step(r) # 2/N
-    a = ((convert(T,4):4:∞) .* (convert(T,-2):2:∞)) ./ ((1:2:∞) .* (3:2:∞) .* (-1:2:∞))
-    b = (((convert(T,2):2:∞) ./ (3:2:∞)).^2 .* (convert(T,2) ./ (1:2:∞) .+ convert(T,2) ./ (5:2:∞)))
+    a = [-2 /((2k+1)*(2k+3)*(2k+5)) for k = -1:∞]
+    b = [4 /((2k+1)*(2k+3)*(2k+5)) for k = 0:∞]
 
     a11 = LazyBandedMatrices.Bidiagonal(Fill(2h/3, N-1), Fill(h/6, N-2), :U)
-    a21 = _BandedMatrix(Fill(h/3, 2, N), N-1, 0, 1)
-    a31 = _BandedMatrix(Vcat(Fill(-2h/15, 1, N), Fill(2h/15, 1, N)), N-1, 0, 1)
+    a21 = _BandedMatrix(Fill(h/6, 2, N), N-1, 0, 1)
+    a31 = _BandedMatrix(Vcat(Fill(-h/30, 1, N), Fill(h/30, 1, N)), N-1, 0, 1)
 
     Symmetric(ArrowheadMatrix(a11, (a21, a31), (),
-                Fill(_BandedMatrix(Vcat((-h*a/2)',
+                Fill(_BandedMatrix(Vcat((h*a/2)',
                 Zeros{T}(1,∞),
                 (h*b/2)'), ∞, 0, 2), N)))
 end
