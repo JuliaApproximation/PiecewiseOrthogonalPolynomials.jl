@@ -14,6 +14,9 @@ axes(B::ContinuousPolynomial{0}) = axes(PiecewisePolynomial(B))
 axes(B::ContinuousPolynomial{1}) =
     (Inclusion(first(B.points) .. last(B.points)), blockedrange(Vcat(length(B.points), Fill(length(B.points) - 1, ∞))))
 
+show(io::IO, Q::ContinuousPolynomial{λ}) where λ = summary(io, Q)
+summary(io::IO, Q::ContinuousPolynomial{λ}) where λ = print(io, "ContinuousPolynomial{$λ}($(Q.points))")
+
 ==(P::PiecewisePolynomial, C::ContinuousPolynomial{0}) = P == PiecewisePolynomial(C)
 ==(C::ContinuousPolynomial{0}, P::PiecewisePolynomial) = PiecewisePolynomial(C) == P
 ==(::PiecewisePolynomial, ::ContinuousPolynomial{1}) = false
@@ -25,6 +28,8 @@ axes(B::ContinuousPolynomial{1}) =
 
 getindex(P::ContinuousPolynomial{0,T}, x::Number, Kk::BlockIndex{1}) where {T} = PiecewisePolynomial(P)[x, Kk]
 
+bubblebasis(::Type{T}) where T = Ultraspherical{T}(-one(real(T))/2)
+
 function getindex(P::ContinuousPolynomial{1,T}, x::Number, Kk::BlockIndex{1}) where {T}
     K, k = block(Kk), blockindex(Kk)
     if K == Block(1)
@@ -33,7 +38,7 @@ function getindex(P::ContinuousPolynomial{1,T}, x::Number, Kk::BlockIndex{1}) wh
         b = searchsortedlast(P.points, x)
         if b == k
             α, β = convert(T, P.points[b]), convert(T, P.points[b+1])
-            Weighted(Jacobi{T}(1, 1))[affine(α.. β, ChebyshevInterval{real(T)}())[x], Int(K)-1]
+            bubblebasis(T)[affine(α.. β, ChebyshevInterval{real(T)}())[x], Int(K)+1]
         else
             zero(T)
         end
@@ -66,11 +71,11 @@ end
 
 function plan_transform(C::ContinuousPolynomial{1,T}, Ns::NTuple{N,Block{1}}, dims=ntuple(identity,Val(N))) where {N,T}
     P = Legendre{T}()
-    W = Weighted(Jacobi{T}(1,1))
+    W = bubblebasis(T)
     # TODO: this is unnecessarily not triangular which makes it much slower than necessary and prevents in-place.
     # However, the speed of the Legendre transform will far exceed this so its not high priority.
     # Probably using Ultraspherical(-1/2) would be better.
-    R̃ = [[T[1 1; -1 1]/2; Zeros{T}(∞,2)] (P \ W)]
+    R̃ = [[T[1 1; -1 1]/2; Zeros{T}(∞,2)] (P \ W)[:,3:end]]
     ContinuousPolynomialTransform(plan_transform(ContinuousPolynomial{0}(C), Ns .+ 1, dims).F, 
                                   InvPlan(map(N -> R̃[1:Int(N),1:Int(N)], Ns .+ 1), _doubledims(dims...)),
                                   dims)
@@ -167,11 +172,11 @@ function adaptivetransform_ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiVe
     c̃ = paddeddata(c)
     N = max(2,div(length(c̃), M, RoundUp)) # degree
     P = Legendre{T}()
-    W = Weighted(Jacobi{T}(1,1))
+    W = bubblebasis(T)
     
     # Restrict hat function to each element, add in bubble functions and compute connection
     # matrix to Legendre. [1 1; -1 1]/2 are the Legendre coefficients of the hat functions.
-    R̃ = [[T[1 1; -1 1]/2; Zeros{T}(∞,2)] (P \ W)]
+    R̃ = [[T[1 1; -1 1]/2; Zeros{T}(∞,2)] (P \ W)[:,3:end]]
 
     # convert from Legendre to piecewise restricted hat + Bubble
     dat = R̃[1:N,1:N] \ reshape(pad(c̃, M*N), M, N)'
@@ -200,7 +205,7 @@ grid(P::ContinuousPolynomial{1}, M::Block{1}) = grid(ContinuousPolynomial{0}(P),
 function \(P::ContinuousPolynomial{0}, C::ContinuousPolynomial{1})
     T = promote_type(eltype(P), eltype(C))
     @assert P.points == C.points
-    v = (convert(T, 2):2:∞) ./ (3:2:∞)
+    v = one(T) ./ (3:2:∞)
     N = length(P.points)
     ArrowheadMatrix(_BandedMatrix(Ones{T}(2, N)/2, oneto(N-1), 0, 1),
         (_BandedMatrix(Fill(v[1], 1, N-1), oneto(N-1), 0, 0),),
@@ -234,15 +239,15 @@ function grammatrix(C::ContinuousPolynomial{1, T, <:AbstractRange}) where T
 
     N = length(r) - 1
     h = step(r) # 2/N
-    a = ((convert(T,4):4:∞) .* (convert(T,-2):2:∞)) ./ ((1:2:∞) .* (3:2:∞) .* (-1:2:∞))
-    b = (((convert(T,2):2:∞) ./ (3:2:∞)).^2 .* (convert(T,2) ./ (1:2:∞) .+ convert(T,2) ./ (5:2:∞)))
+    a = [-2 /((2k+1)*(2k+3)*(2k+5)) for k = -1:∞]
+    b = [4 /((2k+1)*(2k+3)*(2k+5)) for k = 0:∞]
 
     a11 = LazyBandedMatrices.Bidiagonal(Vcat(h/3, Fill(2h/3, N-1), h/3), Fill(h/6, N), :U)
-    a21 = _BandedMatrix(Fill(h/3, 2, N), N+1, 1, 0)
-    a31 = _BandedMatrix(Vcat(Fill(-2h/15, 1, N), Fill(2h/15, 1, N)), N+1, 1, 0)
+    a21 = _BandedMatrix(Fill(h/6, 2, N), N+1, 1, 0)
+    a31 = _BandedMatrix(Vcat(Fill(-h/30, 1, N), Fill(h/30, 1, N)), N+1, 1, 0)
 
     Symmetric(ArrowheadMatrix(a11, (a21, a31), (),
-                Fill(_BandedMatrix(Vcat((-h*a/2)',
+                Fill(_BandedMatrix(Vcat((h*a/2)',
                 Zeros{T}(1,∞),
                 (h*b/2)'), ∞, 0, 2), N)))
 end
@@ -278,12 +283,17 @@ function diff(C::ContinuousPolynomial{1,T}; dims=1) where T
     r = C.points
     N = length(r)
     s = one(T) ./ (r[2:end]-r[1:end-1])
-    v = mortar(Fill(T(2) * s, ∞)) .* mortar(Fill.((-convert(T, 2):-2:-∞), N - 1))
-    z = Zeros{T}(axes(v))
-    H = BlockBroadcastArray(hcat, z, v)
-    M = BlockVcat(Hcat(Ones{T}(N) .* [zero(T); s] , -Ones{T}(N) .* [s; zero(T)] ), H)
-    P = ContinuousPolynomial{0}(C)
-    ApplyQuasiMatrix(*, P, _BandedBlockBandedMatrix(M', axes(P, 2), (0, 0), (0, 1)))
+    ContinuousPolynomial{0}(r) * ArrowheadMatrix(_BandedMatrix(Vcat([0; s]', [-s; 0]'), length(s), 0, 1), (), (),
+                                                 (-2s) .* Ref(Eye{T}(∞)))
+end
+
+function diff(C::ContinuousPolynomial{1,T,<:AbstractRange}; dims=1) where T
+    # Legendre() \ (D*Weighted(Jacobi(1,1)))
+    r = C.points
+    N = length(r)
+    s = 1 ./ step(r)
+    ContinuousPolynomial{0}(r) * ArrowheadMatrix(_BandedMatrix(Vcat(Fill(s, 1, N), Fill(-s, 1, N)), N-1, 0, 1), (), (),
+                                                 Fill(-2s*Eye{T}(∞), N-1))
 end
 
 function weaklaplacian(C::ContinuousPolynomial{1,T,<:AbstractRange}) where T
@@ -294,7 +304,7 @@ function weaklaplacian(C::ContinuousPolynomial{1,T,<:AbstractRange}) where T
     t1 = Vcat(-si, Fill(-2si, N-2), -si)
     t2 = Fill(si, N-1)
     Symmetric(ArrowheadMatrix(LazyBandedMatrices.Bidiagonal(t1, t2, :U), (), (),
-        Fill(Diagonal(convert(T, -16) .* (1:∞) .^ 2 ./ (s .* ((2:2:∞) .+ 1))), N-1)))
+        Fill(Diagonal(convert(T,-4) ./ (s*(convert(T,3):2:∞))), N-1)))
 end
 
 

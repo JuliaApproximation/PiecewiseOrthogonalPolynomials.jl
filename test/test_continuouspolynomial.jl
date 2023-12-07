@@ -61,6 +61,7 @@ using ContinuumArrays: plan_grid_transform
             JR = Block.(1:10)
             KR = Block.(1:11)
             R = P\C
+            @test P[0.1,1:10]'*R[1:10,1:10] ≈ C[0.1,1:10]'
             @test R[KR,JR]'*((P'P)[KR,KR]*R[KR,JR]) ≈ (C'C)[JR,JR]
             @test (P'C)[JR,JR] ≈ (C'P)[JR,JR]'
         end
@@ -86,6 +87,8 @@ using ContinuumArrays: plan_grid_transform
             x = axes(C,1)
             D = Derivative(x)
             A = P\D*C
+
+            @test (D*expand(C, exp))[0.1] ≈ exp(0.1)
 
             xx = rand(5)
             c = (x, p) -> ContinuousPolynomial{1, eltype(x)}(r)[x, p]
@@ -147,7 +150,7 @@ using ContinuumArrays: plan_grid_transform
         x = SVector(0.1, 0.2)
         @test view(C, x, 1) .* view(C, x, 1) ≈ C[x,1] .* C[x,1]
 
-        @test C \ (C[:,1] .* C[:,1]) ≈ [1; zeros(3); -1/4; zeros(∞)]
+        @test C \ (C[:,1] .* C[:,1]) ≈ [1; zeros(3); -1/2; zeros(∞)]
         @test C \ (C[:,1] .* C[:,3]) ≈ zeros(∞)
     end
 
@@ -158,8 +161,8 @@ using ContinuumArrays: plan_grid_transform
         x = axes(P,1)
         D = Derivative(x)
 
-        a = expand(P, x -> abs(x) ≤ 1/3 ? 2 : 3)    
-        L = (D*C)'* (a .* (D*C)) 
+        a = expand(P, x -> abs(x) ≤ 1/3 ? 2 : 3)
+        L = (D*C)'* (a .* (D*C))
     end
 
     @testset "expand" begin

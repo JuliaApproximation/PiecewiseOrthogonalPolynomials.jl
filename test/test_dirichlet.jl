@@ -69,4 +69,14 @@ using PiecewiseOrthogonalPolynomials: ArrowheadMatrix, plan_grid_transform
         @test Q[0.1, Block.(1:20)]' * V * Q[0.2,Block.(1:21)] ≈ f(0.1,0.2)
         @test F \ V ≈ vals
     end
+
+    @testset "show" begin
+        Q = DirichletPolynomial(-1:1)
+        C = ContinuousPolynomial{1}(-1:1)
+        P = ContinuousPolynomial{0}(-1:1)
+
+        @test sprint(show, Q) == "DirichletPolynomial(-1:1)"
+        @test sprint(show, C) == "ContinuousPolynomial{1}(-1:1)"
+        @test sprint(show, P) == "ContinuousPolynomial{0}(-1:1)"
+    end
 end
