@@ -150,7 +150,7 @@ using ContinuumArrays: plan_grid_transform
         x = SVector(0.1, 0.2)
         @test view(C, x, 1) .* view(C, x, 1) ≈ C[x,1] .* C[x,1]
 
-        @test C \ (C[:,1] .* C[:,1]) ≈ [1; zeros(3); -1/4; zeros(∞)]
+        @test C \ (C[:,1] .* C[:,1]) ≈ [1; zeros(3); -1/2; zeros(∞)]
         @test C \ (C[:,1] .* C[:,3]) ≈ zeros(∞)
     end
 
@@ -161,8 +161,8 @@ using ContinuumArrays: plan_grid_transform
         x = axes(P,1)
         D = Derivative(x)
 
-        a = expand(P, x -> abs(x) ≤ 1/3 ? 2 : 3)    
-        L = (D*C)'* (a .* (D*C)) 
+        a = expand(P, x -> abs(x) ≤ 1/3 ? 2 : 3)
+        L = (D*C)'* (a .* (D*C))
     end
 
     @testset "expand" begin

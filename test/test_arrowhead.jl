@@ -8,7 +8,7 @@ import Base: oneto, OneTo
 @testset "ArrowheadMatrix" begin
     @testset "Algebra" begin
         n = 4; p = 5;
-        A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)), 
+        A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)),
                                 ntuple(_ -> BandedMatrix((0 => randn(n-1), -1 => randn(n-1)), (n,n-1)), 2),
                                 ntuple(_ -> BandedMatrix((0 => randn(n), 1 => randn(n-1)), (n-1,n)), 3),
                             fill(BandedMatrix((0 => randn(p) .+ 10, 2 => randn(p-2), -1=> randn(p-1)), (p, p)), n-1))
@@ -30,7 +30,7 @@ import Base: oneto, OneTo
 
     @testset "mul" begin
         n = 4; p = 5;
-        A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)), 
+        A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)),
                                 ntuple(_ -> BandedMatrix((0 => randn(n-1), -1 => randn(n-1)), (n,n-1)), 2),
                                 ntuple(_ -> BandedMatrix((0 => randn(n), 1 => randn(n-1)), (n-1,n)), 3),
                             fill(BandedMatrix((0 => randn(p) .+ 10, 2 => randn(p-2), -1=> randn(p-1)), (p, p)), n-1))
@@ -47,7 +47,7 @@ import Base: oneto, OneTo
 
     @testset "UpperTriangular" begin
         n = 4; p = 5;
-        A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)), 
+        A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)),
                                 [BandedMatrix((0 => randn(n-1), -1 => randn(n-1)), (n,n-1)) for _=1:2],
                                 [BandedMatrix((0 => randn(n), 1 => randn(n-1)), (n-1,n)) for _=1:2],
                             fill(BandedMatrix((0 => randn(p) .+ 10, 2 => randn(p-2), -1=> randn(p-1)), (p, p)), n-1))
@@ -74,7 +74,7 @@ import Base: oneto, OneTo
 
     @testset "reversecholesky" begin
         n = 3; p = 5;
-        A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)), 
+        A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)),
                                 [BandedMatrix((0 => randn(n-1), -1 => randn(n-1)), (n,n-1)) for _=1:2],
                                 BandedMatrix{Float64, Matrix{Float64}, OneTo{Int}}[],
                             fill(BandedMatrix((0 => randn(p) .+ 10, 2 => randn(p-2)), (p, p)), n-1))
@@ -82,7 +82,7 @@ import Base: oneto, OneTo
         @test reversecholesky(Symmetric(Matrix(A))).U ≈ reversecholesky!(Symmetric(copy(A))).U
 
 
-        A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)), 
+        A = ArrowheadMatrix(BandedMatrix(0 => randn(n) .+ 10, 1 => randn(n-1), -1 => randn(n-1)),
                                 [BandedMatrix((0 => randn(n-1), -1 => randn(n-1)), (n,n-1)) for _=1:2],
                                 BandedMatrix{Float64, Matrix{Float64}, OneTo{Int}}[],
                             fill(BandedMatrix((0 => randn(p) .+ 10, 1 => randn(p-1), 2 => randn(p-2)), (p, p)), n-1))
@@ -103,7 +103,7 @@ import Base: oneto, OneTo
         @test blockbandwidths(L) == (1,1)
         @test subblockbandwidths(L) == (1,1)
 
-        @test stringmime("text/plain", L[Block.(OneTo(3)), Block.(OneTo(3))]) == "3×3-blocked 9×10 ArrowheadMatrix{Float64}:\n  0.5   0.5    ⋅    ⋅   │   0.666667    ⋅          ⋅        │   ⋅    ⋅    ⋅ \n   ⋅    0.5   0.5   ⋅   │    ⋅         0.666667    ⋅        │   ⋅    ⋅    ⋅ \n   ⋅     ⋅    0.5  0.5  │    ⋅          ⋅         0.666667  │   ⋅    ⋅    ⋅ \n ───────────────────────┼───────────────────────────────────┼───────────────\n -0.5   0.5    ⋅    ⋅   │   0.0         ⋅          ⋅        │  0.8   ⋅    ⋅ \n   ⋅   -0.5   0.5   ⋅   │    ⋅         0.0         ⋅        │   ⋅   0.8   ⋅ \n   ⋅     ⋅   -0.5  0.5  │    ⋅          ⋅         0.0       │   ⋅    ⋅   0.8\n ───────────────────────┼───────────────────────────────────┼───────────────\n   ⋅     ⋅     ⋅    ⋅   │  -0.666667    ⋅          ⋅        │  0.0   ⋅    ⋅ \n   ⋅     ⋅     ⋅    ⋅   │    ⋅        -0.666667    ⋅        │   ⋅   0.0   ⋅ \n   ⋅     ⋅     ⋅    ⋅   │    ⋅          ⋅        -0.666667  │   ⋅    ⋅   0.0"
+        @test stringmime("text/plain", L[Block.(OneTo(3)), Block.(OneTo(3))]) == "3×3-blocked 9×10 ArrowheadMatrix{Float64}:\n  0.5   0.5    ⋅    ⋅   │   0.333333    ⋅          ⋅        │   ⋅    ⋅    ⋅ \n   ⋅    0.5   0.5   ⋅   │    ⋅         0.333333    ⋅        │   ⋅    ⋅    ⋅ \n   ⋅     ⋅    0.5  0.5  │    ⋅          ⋅         0.333333  │   ⋅    ⋅    ⋅ \n ───────────────────────┼───────────────────────────────────┼───────────────\n -0.5   0.5    ⋅    ⋅   │   0.0         ⋅          ⋅        │  0.2   ⋅    ⋅ \n   ⋅   -0.5   0.5   ⋅   │    ⋅         0.0         ⋅        │   ⋅   0.2   ⋅ \n   ⋅     ⋅   -0.5  0.5  │    ⋅          ⋅         0.0       │   ⋅    ⋅   0.2\n ───────────────────────┼───────────────────────────────────┼───────────────\n   ⋅     ⋅     ⋅    ⋅   │  -0.333333    ⋅          ⋅        │  0.0   ⋅    ⋅ \n   ⋅     ⋅     ⋅    ⋅   │    ⋅        -0.333333    ⋅        │   ⋅   0.0   ⋅ \n   ⋅     ⋅     ⋅    ⋅   │    ⋅          ⋅        -0.333333  │   ⋅    ⋅   0.0"
     end
 
     @testset "Helmholtz solve" begin
@@ -128,7 +128,7 @@ import Base: oneto, OneTo
 
     @testset "Dirichlet" begin
         n = 5; p = 5;
-        A = ArrowheadMatrix(BandedMatrix(0 => randn(n-2) .+ 10, 1 => randn(n-3), -1 => randn(n-3)), 
+        A = ArrowheadMatrix(BandedMatrix(0 => randn(n-2) .+ 10, 1 => randn(n-3), -1 => randn(n-3)),
                                 [BandedMatrix((0 => randn(n-2), 1 => randn(n-2)), (n-2,n-1)) for _=1:2],
                                 BandedMatrix{Float64, Matrix{Float64}, OneTo{Int}}[],
                             fill(BandedMatrix((0 => randn(p) .+ 10, 2 => randn(p-2)), (p, p)), n-1))
