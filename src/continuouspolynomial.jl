@@ -25,6 +25,8 @@ axes(B::ContinuousPolynomial{1}) =
 
 getindex(P::ContinuousPolynomial{0,T}, x::Number, Kk::BlockIndex{1}) where {T} = PiecewisePolynomial(P)[x, Kk]
 
+bubblebasis(::Type{T}) where T = Ultraspherical{T}(-one(real(T))/2)
+
 function getindex(P::ContinuousPolynomial{1,T}, x::Number, Kk::BlockIndex{1}) where {T}
     K, k = block(Kk), blockindex(Kk)
     if K == Block(1)
@@ -33,7 +35,7 @@ function getindex(P::ContinuousPolynomial{1,T}, x::Number, Kk::BlockIndex{1}) wh
         b = searchsortedlast(P.points, x)
         if b == k
             α, β = convert(T, P.points[b]), convert(T, P.points[b+1])
-            Weighted(Jacobi{T}(1, 1))[affine(α.. β, ChebyshevInterval{real(T)}())[x], Int(K)-1]
+            bubblebasis(T)[affine(α.. β, ChebyshevInterval{real(T)}())[x], Int(K)+1]
         else
             zero(T)
         end
@@ -66,7 +68,7 @@ end
 
 function plan_transform(C::ContinuousPolynomial{1,T}, Ns::NTuple{N,Block{1}}, dims=ntuple(identity,Val(N))) where {N,T}
     P = Legendre{T}()
-    W = Weighted(Jacobi{T}(1,1))
+    W = bubblebasis(T)
     # TODO: this is unnecessarily not triangular which makes it much slower than necessary and prevents in-place.
     # However, the speed of the Legendre transform will far exceed this so its not high priority.
     # Probably using Ultraspherical(-1/2) would be better.
@@ -167,7 +169,7 @@ function adaptivetransform_ldiv(Q::ContinuousPolynomial{1,V}, f::AbstractQuasiVe
     c̃ = paddeddata(c)
     N = max(2,div(length(c̃), M, RoundUp)) # degree
     P = Legendre{T}()
-    W = Weighted(Jacobi{T}(1,1))
+    W = bubblebasis(T)
     
     # Restrict hat function to each element, add in bubble functions and compute connection
     # matrix to Legendre. [1 1; -1 1]/2 are the Legendre coefficients of the hat functions.
@@ -200,7 +202,7 @@ grid(P::ContinuousPolynomial{1}, M::Block{1}) = grid(ContinuousPolynomial{0}(P),
 function \(P::ContinuousPolynomial{0}, C::ContinuousPolynomial{1})
     T = promote_type(eltype(P), eltype(C))
     @assert P.points == C.points
-    v = (convert(T, 2):2:∞) ./ (3:2:∞)
+    v = one(T) ./ (3:2:∞)
     N = length(P.points)
     ArrowheadMatrix(_BandedMatrix(Ones{T}(2, N)/2, oneto(N-1), 0, 1),
         (_BandedMatrix(Fill(v[1], 1, N-1), oneto(N-1), 0, 0),),
@@ -234,8 +236,8 @@ function grammatrix(C::ContinuousPolynomial{1, T, <:AbstractRange}) where T
 
     N = length(r) - 1
     h = step(r) # 2/N
-    a = ((convert(T,4):4:∞) .* (convert(T,-2):2:∞)) ./ ((1:2:∞) .* (3:2:∞) .* (-1:2:∞))
-    b = (((convert(T,2):2:∞) ./ (3:2:∞)).^2 .* (convert(T,2) ./ (1:2:∞) .+ convert(T,2) ./ (5:2:∞)))
+    a = [-2 /((2k+1)*(2k+3)*(2k+5)) for k = 1:∞]
+    b = [4 /(max(2,2k+1)*(2k+3)*(2k+5)) for k = 0:∞]
 
     a11 = LazyBandedMatrices.Bidiagonal(Vcat(h/3, Fill(2h/3, N-1), h/3), Fill(h/6, N), :U)
     a21 = _BandedMatrix(Fill(h/3, 2, N), N+1, 1, 0)
