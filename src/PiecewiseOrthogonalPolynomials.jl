@@ -11,6 +11,8 @@ import LazyArrays: paddeddata
 import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec, BandedLazyLayouts, AbstractLazyBandedBlockBandedLayout, UpperOrLowerTriangular
 import Base: size, axes, getindex, +, -, *, /, ==, \, OneTo, oneto, replace_in_print_matrix, copy, diff, getproperty, adjoint, transpose, tail, _sum, inv
 import LinearAlgebra: BlasInt
+import InfiniteArrays: OneToInf
+import FillArrays: AbstractFill
 import MatrixFactorizations: reversecholcopy
 
 export PiecewisePolynomial, ContinuousPolynomial, DirichletPolynomial, Derivative, Block, weaklaplacian, grammatrix

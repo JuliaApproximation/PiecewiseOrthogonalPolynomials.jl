@@ -61,6 +61,7 @@ using ContinuumArrays: plan_grid_transform
             JR = Block.(1:10)
             KR = Block.(1:11)
             R = P\C
+            @test P[0.1,1:10]'*R[1:10,1:10] ≈ C[0.1,1:10]'
             @test R[KR,JR]'*((P'P)[KR,KR]*R[KR,JR]) ≈ (C'C)[JR,JR]
             @test (P'C)[JR,JR] ≈ (C'P)[JR,JR]'
         end
@@ -86,6 +87,8 @@ using ContinuumArrays: plan_grid_transform
             x = axes(C,1)
             D = Derivative(x)
             A = P\D*C
+
+            @test (D*expand(C, exp))[0.1] ≈ exp(0.1)
 
             xx = rand(5)
             c = (x, p) -> ContinuousPolynomial{1, eltype(x)}(r)[x, p]
