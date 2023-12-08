@@ -209,4 +209,18 @@ using ContinuumArrays: plan_grid_transform
 
         @test F_xy ≈ f_xy.(x, reshape(y,1,1,size(y)...))
     end
+
+    @testset "Dirac" begin
+        r = range(-1,1; length=4)
+        C = ContinuousPolynomial{1}(r)
+        P = ContinuousPolynomial{0}(r)
+        H = ContinuousPolynomial{-1}(r)
+
+        f = expand(P, exp)
+        @test (H/H\f)[0.1] ≈ exp(0.1)
+        @test diff(f)[0.1] ≈ exp(0.1)
+
+        f = expand(C,exp)
+        @test diff(diff(f))[0.1] ≈ exp(0.1)
+    end
 end

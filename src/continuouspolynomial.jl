@@ -1,3 +1,9 @@
+"""
+   ContinuousPolynomial{0}  is piecewise Legendre
+   ContinuousPolynomial{1}  is hat functions in first block and rest are bubble functions Ultraspherical(-1/2)
+   ContinuousPolynomial{-1} is delta functions (non-boundary) and rest are Ultraspherical(1/2) == diff(Legendre())[:,2:end] in the interior of the elements.
+   Between elements we are consistent with differentiating Legendre: we have delta functions of (-1)^k on the left and -1 on the right.
+"""
 struct ContinuousPolynomial{order,T,P<:AbstractVector} <: AbstractPiecewisePolynomial{order,T,P}
     points::P
 end
@@ -11,8 +17,8 @@ ContinuousPolynomial{o}(P::ContinuousPolynomial) where {o} = ContinuousPolynomia
 PiecewisePolynomial(P::ContinuousPolynomial{o,T}) where {o,T} = PiecewisePolynomial(Legendre{T}(), P.points)
 
 axes(B::ContinuousPolynomial{0}) = axes(PiecewisePolynomial(B))
-axes(B::ContinuousPolynomial{1}) =
-    (Inclusion(first(B.points) .. last(B.points)), blockedrange(Vcat(length(B.points), Fill(length(B.points) - 1, ∞))))
+axes(B::ContinuousPolynomial{1}) = (Inclusion(first(B.points) .. last(B.points)), blockedrange(Vcat(length(B.points), Fill(length(B.points) - 1, ∞))))
+axes(B::ContinuousPolynomial{-1}) = (Inclusion(first(B.points) .. last(B.points)), blockedrange(Vcat(length(B.points)-2, Fill(length(B.points) - 1, ∞))))
 
 show(io::IO, Q::ContinuousPolynomial{λ}) where λ = summary(io, Q)
 summary(io::IO, Q::ContinuousPolynomial{λ}) where λ = print(io, "ContinuousPolynomial{$λ}($(Q.points))")
@@ -39,6 +45,21 @@ function getindex(P::ContinuousPolynomial{1,T}, x::Number, Kk::BlockIndex{1}) wh
         if b == k
             α, β = convert(T, P.points[b]), convert(T, P.points[b+1])
             bubblebasis(T)[affine(α.. β, ChebyshevInterval{real(T)}())[x], Int(K)+1]
+        else
+            zero(T)
+        end
+    end
+end
+
+function getindex(P::ContinuousPolynomial{-1,T}, x::Number, Kk::BlockIndex{1}) where {T}
+    K, k = block(Kk), blockindex(Kk)
+    if K == Block(1)
+        Spline{-1,T}(P.points)[x, k]
+    else
+        b = searchsortedlast(P.points, x)
+        if b == k
+            α, β = convert(T, P.points[b]), convert(T, P.points[b+1])
+            Ultraspherical{T}(3one(real(T))/2)[affine(α.. β, ChebyshevInterval{real(T)}())[x], Int(K)-1]
         else
             zero(T)
         end
@@ -214,6 +235,22 @@ function \(P::ContinuousPolynomial{0}, C::ContinuousPolynomial{1})
 end
 
 
+@simplify function \(D::ContinuousPolynomial{-1}, P::ContinuousPolynomial{0})
+    T = promote_type(eltype(D), eltype(P))
+    @assert D.points == P.points
+    N = length(P.points)
+    R = Ultraspherical{T}(3one(T)/2)\Legendre{T}()
+
+    # The basis for D is defined in each element a..b as diff(legendre(a..b)) with delta functions. But note that
+    # the delta functions don't change! We need to kill off the deltas in conversion.
+    ArrowheadMatrix(_BandedMatrix(Vcat(Fill(-one(T),1,N-1), Fill(one(T),1,N-1)), N-2, 0, 1),
+        (_BandedMatrix(Ones{T}(2,N-1), N-2, 0, 1),),
+        (SquareEye{T}(N-1),),
+        Fill(R[:,2:end], N-1))
+end
+
+
+
 
 ######
 # Gram matrix
@@ -279,7 +316,7 @@ end
 #####
 
 function diff(C::ContinuousPolynomial{1,T}; dims=1) where T
-    # Legendre() \ (D*Weighted(Jacobi(1,1)))
+    # Legendre() \ (D*Ultraspherical(3/2)))
     r = C.points
     N = length(r)
     s = one(T) ./ (r[2:end]-r[1:end-1])
@@ -295,6 +332,18 @@ function diff(C::ContinuousPolynomial{1,T,<:AbstractRange}; dims=1) where T
     ContinuousPolynomial{0}(r) * ArrowheadMatrix(_BandedMatrix(Vcat(Fill(s, 1, N), Fill(-s, 1, N)), N-1, 0, 1), (), (),
                                                  Fill(-2s*Eye{T}(∞), N-1))
 end
+
+function diff(P::ContinuousPolynomial{0,T,<:AbstractRange}; dims=1) where T
+    r = P.points
+    N = length(r)
+    s = step(r)
+    
+    ContinuousPolynomial{-1}(r) * ArrowheadMatrix(_BandedMatrix(Vcat(Fill(one(T),1,N-1), Fill(-one(T),1,N-1)), N-2, 0, 1),
+        (),
+        (),
+        Fill(Eye{T}(∞) * (2/s), N-1))
+end
+
 
 function weaklaplacian(C::ContinuousPolynomial{1,T,<:AbstractRange}) where T
     r = C.points
