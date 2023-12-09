@@ -1,5 +1,5 @@
 using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, ContinuumArrays, Test
-using PiecewiseOrthogonalPolynomials: ArrowheadMatrix, plan_grid_transform
+using PiecewiseOrthogonalPolynomials: BBBArrowheadMatrix, plan_grid_transform
 
 @testset "DirichletPolynomial" begin
     Q = DirichletPolynomial(range(-1,1; length=4))
@@ -18,7 +18,7 @@ using PiecewiseOrthogonalPolynomials: ArrowheadMatrix, plan_grid_transform
 
     f = expand(Q, x -> (1-x^2) * exp(x))
     @test f[0.1] ≈ (1-0.1^2) * exp(0.1)
-    @test Q'Q isa Symmetric{Float64,<:ArrowheadMatrix}
+    @test Q'Q isa Symmetric{Float64,<:BBBArrowheadMatrix}
     KR = Block.(Base.OneTo(10))
     @test ((Q'C) * (C\f))[KR] ≈ (Q'C)[KR,KR] * (C\f)[KR]
 

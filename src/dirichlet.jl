@@ -36,7 +36,7 @@ function \(C::ContinuousPolynomial{1}, Q::DirichletPolynomial)
     T = promote_type(eltype(Q), eltype(C))
     @assert C.points == Q.points
     m = length(C.points)
-    ArrowheadMatrix(layout_getindex(Eye{T}(m), :, 2:m-1), (), (), Fill(Eye{T}(∞), m-1))
+    BBBArrowheadMatrix(layout_getindex(Eye{T}(m), :, 2:m-1), (), (), Fill(Eye{T}(∞), m-1))
 end
 
 # \ understood as pseudo invers
@@ -44,7 +44,7 @@ function \(Q::DirichletPolynomial, C::ContinuousPolynomial{1})
     T = promote_type(eltype(Q), eltype(C))
     @assert C.points == Q.points
     m = length(C.points)
-    ArrowheadMatrix(layout_getindex(Eye{T}(m), 2:m-1, :), (), (), Fill(Eye{T}(∞), m-1))
+    BBBArrowheadMatrix(layout_getindex(Eye{T}(m), 2:m-1, :), (), (), Fill(Eye{T}(∞), m-1))
 end
 
 function \(P::ContinuousPolynomial, Q::DirichletPolynomial)
@@ -173,7 +173,7 @@ function weaklaplacian(C::DirichletPolynomial{T,<:AbstractRange}) where T
     si = inv(s)
     t1 = Fill(-2si, N-2)
     t2 = Fill(si, N-3)
-    Symmetric(ArrowheadMatrix(LazyBandedMatrices.Bidiagonal(t1, t2, :U), (), (),
+    Symmetric(BBBArrowheadMatrix(LazyBandedMatrices.Bidiagonal(t1, t2, :U), (), (),
         Fill(Diagonal(convert(T, -4) ./ (s*(convert(T,3):2:∞))), N-1)))
 end
 
@@ -189,7 +189,7 @@ function grammatrix(Q::DirichletPolynomial{T, <:AbstractRange}) where T
     a21 = _BandedMatrix(Fill(h/6, 2, N), N-1, 0, 1)
     a31 = _BandedMatrix(Vcat(Fill(-h/30, 1, N), Fill(h/30, 1, N)), N-1, 0, 1)
 
-    Symmetric(ArrowheadMatrix(a11, (a21, a31), (),
+    Symmetric(BBBArrowheadMatrix(a11, (a21, a31), (),
                 Fill(_BandedMatrix(Vcat((h*a/2)',
                 Zeros{T}(1,∞),
                 (h*b/2)'), ∞, 0, 2), N)))

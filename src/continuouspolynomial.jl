@@ -228,7 +228,7 @@ function \(P::ContinuousPolynomial{0}, C::ContinuousPolynomial{1})
     @assert P.points == C.points
     v = one(T) ./ (3:2:∞)
     N = length(P.points)
-    ArrowheadMatrix(_BandedMatrix(Ones{T}(2, N)/2, oneto(N-1), 0, 1),
+    BBBArrowheadMatrix(_BandedMatrix(Ones{T}(2, N)/2, oneto(N-1), 0, 1),
         (_BandedMatrix(Fill(v[1], 1, N-1), oneto(N-1), 0, 0),),
         (_BandedMatrix(Vcat(Ones{T}(1, N)/2, -Ones{T}(1, N)/2), oneto(N-1), 0, 1),),
         Fill(_BandedMatrix(Hcat(v, Zeros{T}(∞), -v)', axes(v,1), 1, 1), N-1))
@@ -243,7 +243,7 @@ end
 
     # The basis for D is defined in each element a..b as diff(legendre(a..b)) with delta functions. But note that
     # the delta functions don't change! We need to kill off the deltas in conversion.
-    ArrowheadMatrix(_BandedMatrix(Vcat(Fill(-one(T),1,N-1), Fill(one(T),1,N-1)), N-2, 0, 1),
+    BBBArrowheadMatrix(_BandedMatrix(Vcat(Fill(-one(T),1,N-1), Fill(one(T),1,N-1)), N-2, 0, 1),
         (_BandedMatrix(Ones{T}(2,N-1), N-2, 0, 1),),
         (SquareEye{T}(N-1),),
         Fill(R[:,2:end], N-1))
@@ -261,7 +261,7 @@ function grammatrix(A::ContinuousPolynomial{0,T}) where T
     N = length(r) - 1
     hs = diff(r)
     M = grammatrix(Legendre{T}())
-    ArrowheadMatrix{T}(Diagonal(hs), (), (), [Diagonal(M.diag[2:end] * h/2) for h in hs])
+    BBBArrowheadMatrix{T}(Diagonal(hs), (), (), [Diagonal(M.diag[2:end] * h/2) for h in hs])
 end
 
 function grammatrix(A::ContinuousPolynomial{0,T, <:AbstractRange}) where T
@@ -283,7 +283,7 @@ function grammatrix(C::ContinuousPolynomial{1, T, <:AbstractRange}) where T
     a21 = _BandedMatrix(Fill(h/6, 2, N), N+1, 1, 0)
     a31 = _BandedMatrix(Vcat(Fill(-h/30, 1, N), Fill(h/30, 1, N)), N+1, 1, 0)
 
-    Symmetric(ArrowheadMatrix(a11, (a21, a31), (),
+    Symmetric(BBBArrowheadMatrix(a11, (a21, a31), (),
                 Fill(_BandedMatrix(Vcat((h*a/2)',
                 Zeros{T}(1,∞),
                 (h*b/2)'), ∞, 0, 2), N)))
@@ -320,7 +320,7 @@ function diff(C::ContinuousPolynomial{1,T}; dims=1) where T
     r = C.points
     N = length(r)
     s = one(T) ./ (r[2:end]-r[1:end-1])
-    ContinuousPolynomial{0}(r) * ArrowheadMatrix(_BandedMatrix(Vcat([0; s]', [-s; 0]'), length(s), 0, 1), (), (),
+    ContinuousPolynomial{0}(r) * BBBArrowheadMatrix(_BandedMatrix(Vcat([0; s]', [-s; 0]'), length(s), 0, 1), (), (),
                                                  (-2s) .* Ref(Eye{T}(∞)))
 end
 
@@ -329,7 +329,7 @@ function diff(C::ContinuousPolynomial{1,T,<:AbstractRange}; dims=1) where T
     r = C.points
     N = length(r)
     s = 1 ./ step(r)
-    ContinuousPolynomial{0}(r) * ArrowheadMatrix(_BandedMatrix(Vcat(Fill(s, 1, N), Fill(-s, 1, N)), N-1, 0, 1), (), (),
+    ContinuousPolynomial{0}(r) * BBBArrowheadMatrix(_BandedMatrix(Vcat(Fill(s, 1, N), Fill(-s, 1, N)), N-1, 0, 1), (), (),
                                                  Fill(-2s*Eye{T}(∞), N-1))
 end
 
@@ -338,7 +338,7 @@ function diff(P::ContinuousPolynomial{0,T,<:AbstractRange}; dims=1) where T
     N = length(r)
     s = step(r)
     
-    ContinuousPolynomial{-1}(r) * ArrowheadMatrix(_BandedMatrix(Vcat(Fill(one(T),1,N-1), Fill(-one(T),1,N-1)), N-2, 0, 1),
+    ContinuousPolynomial{-1}(r) * BBBArrowheadMatrix(_BandedMatrix(Vcat(Fill(one(T),1,N-1), Fill(-one(T),1,N-1)), N-2, 0, 1),
         (),
         (),
         Fill(Eye{T}(∞) * (2/s), N-1))
@@ -352,7 +352,7 @@ function weaklaplacian(C::ContinuousPolynomial{1,T,<:AbstractRange}) where T
     si = inv(s)
     t1 = Vcat(-si, Fill(-2si, N-2), -si)
     t2 = Fill(si, N-1)
-    Symmetric(ArrowheadMatrix(LazyBandedMatrices.Bidiagonal(t1, t2, :U), (), (),
+    Symmetric(BBBArrowheadMatrix(LazyBandedMatrices.Bidiagonal(t1, t2, :U), (), (),
         Fill(Diagonal(convert(T,-4) ./ (s*(convert(T,3):2:∞))), N-1)))
 end
 
