@@ -222,5 +222,7 @@ using ContinuumArrays: plan_grid_transform
 
         f = expand(C,exp)
         @test diff(diff(f))[0.1] ≈ exp(0.1)
+
+        @test diff(C)[0.1,1:5] ≈ [0,-1.5,1.5,0,0]
     end
 end
