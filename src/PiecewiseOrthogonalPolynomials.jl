@@ -13,12 +13,13 @@ import Base: size, axes, getindex, +, -, *, /, ==, \, OneTo, oneto, replace_in_p
 import LinearAlgebra: BlasInt
 import InfiniteArrays: OneToInf
 import FillArrays: AbstractFill
-import MatrixFactorizations: reversecholcopy
 import FillArrays: SquareEye
 
-export PiecewisePolynomial, ContinuousPolynomial, DirichletPolynomial, Derivative, Block, weaklaplacian, grammatrix
+export PiecewisePolynomial, ContinuousPolynomial, DirichletPolynomial, Derivative, Block, weaklaplacian, grammatrix, BBBArrowheadMatrix
 
 include("arrowhead.jl")
+using BBBArrowheadMatrices
+
 include("piecewisepolynomial.jl")
 include("continuouspolynomial.jl")
 include("dirichlet.jl")

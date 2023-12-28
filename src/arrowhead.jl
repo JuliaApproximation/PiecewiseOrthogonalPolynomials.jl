@@ -1,3 +1,18 @@
+module BBBArrowheadMatrices
+using LinearAlgebra, BlockArrays, BlockBandedMatrices, BandedMatrices, MatrixFactorizations, LazyBandedMatrices, LazyArrays, ArrayLayouts, InfiniteArrays, FillArrays
+import ArrayLayouts: sublayout, sub_materialize, symmetriclayout, transposelayout, SymmetricLayout, HermitianLayout, TriangularLayout, layout_getindex, materialize!, MatLdivVec, AbstractStridedLayout, triangulardata, MatMulMatAdd, MatMulVecAdd, _fill_lmul!, layout_replace_in_print_matrix
+import BlockBandedMatrices: subblockbandwidths, blockbandwidths, AbstractBandedBlockBandedLayout, AbstractBandedBlockBandedMatrix
+import Base: axes, copy, getindex
+import LazyArrays: paddeddata, AbstractLazyLayout
+import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec, BandedLazyLayouts, AbstractLazyBandedBlockBandedLayout, UpperOrLowerTriangular
+import LinearAlgebra: adjoint, transpose
+import MatrixFactorizations: reversecholcopy
+import FillArrays: AbstractFill
+import FillArrays: SquareEye
+import InfiniteArrays: OneToInf
+
+
+export BBBArrowheadMatrix
 
 """
 BBBArrowheadMatrix
@@ -499,3 +514,5 @@ for Tri in (:LowerTriangular, :UnitLowerTriangular)
         end
     end
 end
+
+end #module
