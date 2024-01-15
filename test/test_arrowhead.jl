@@ -146,11 +146,10 @@ import Base: oneto, OneTo
     end
 
     @testset "banded" begin
+        n = 5; p = 5;
         A = BBBArrowheadMatrix(BandedMatrix(0 => 1:n, 1 => 1:n-1, -1 => 1:n-1),
                                 ntuple(_ -> BandedMatrix((0 => randn(n-1), -1 => randn(n-1)), (n,n-1)), 2),
                                 ntuple(_ -> BandedMatrix((0 => randn(n), 1 => randn(n-1)), (n-1,n)), 3),
                             fill(BandedMatrix((0 => randn(p) .+ 10, 2 => randn(p-2), -1=> randn(p-1)), (p, p)), n-1))
-
-        
     end
 end
