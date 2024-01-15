@@ -1,6 +1,7 @@
 module BBBArrowheadMatrices
 using LinearAlgebra, BlockArrays, BlockBandedMatrices, BandedMatrices, MatrixFactorizations, LazyBandedMatrices, LazyArrays, ArrayLayouts, InfiniteArrays, FillArrays
 import ArrayLayouts: MemoryLayout, sublayout, sub_materialize, symmetriclayout, transposelayout, SymmetricLayout, HermitianLayout, TriangularLayout, layout_getindex, materialize!, MatLdivVec, AbstractStridedLayout, triangulardata, MatMulMatAdd, MatMulVecAdd, _fill_lmul!, layout_replace_in_print_matrix
+import BandedMatrices: isbanded, bandwidths
 import BlockArrays: BlockSlice, block, blockindex, blockvec
 import BlockBandedMatrices: subblockbandwidths, blockbandwidths, AbstractBandedBlockBandedLayout, AbstractBandedBlockBandedMatrix
 import Base: size, axes, getindex, +, -, *, /, ==, \, OneTo, oneto, replace_in_print_matrix, copy, diff, getproperty, adjoint, transpose, tail, _sum, inv, show, summary
@@ -515,5 +516,12 @@ for Tri in (:LowerTriangular, :UnitLowerTriangular)
         end
     end
 end
+
+####
+# banded interface
+#####
+
+bandwidths(A::BBBArrowheadMatrix) = +(size(A.A,1), size.(Base.front(A.C),1)...) + bandwidth(last(A.C),1)+1, +(size(A.A,2), size.(Base.front(A.B),2)...) + bandwidth(last(A.B),2)+1
+isbanded(A::BBBArrowheadMatrix) = true
 
 end #module
