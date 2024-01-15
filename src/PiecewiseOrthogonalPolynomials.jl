@@ -18,7 +18,7 @@ import FillArrays: SquareEye
 export PiecewisePolynomial, ContinuousPolynomial, DirichletPolynomial, Derivative, Block, weaklaplacian, grammatrix, BBBArrowheadMatrix
 
 include("arrowhead.jl")
-using BBBArrowheadMatrices
+using .BBBArrowheadMatrices
 
 include("piecewisepolynomial.jl")
 include("continuouspolynomial.jl")
