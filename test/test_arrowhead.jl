@@ -1,4 +1,4 @@
-using PiecewiseOrthogonalPolynomials, FillArrays, BandedMatrices, MatrixFactorizations, BlockBandedMatrices, Base64, ClassicalOrthogonalPolynomials, Test
+using PiecewiseOrthogonalPolynomials, FillArrays, BandedMatrices, MatrixFactorizations, BlockBandedMatrices, BandedMatrices, Base64, ClassicalOrthogonalPolynomials, LinearAlgebra, Test
 using PiecewiseOrthogonalPolynomials: BBBArrowheadMatrix
 using InfiniteArrays, BlockArrays
 using BandedMatrices: _BandedMatrix
@@ -143,5 +143,35 @@ import Base: oneto, OneTo
         U = reversecholesky(Symmetric(A)).U
         @test U ≈ reversecholesky(Matrix(Symmetric(A))).U
         @test U*U' ≈ Symmetric(A)
+    end
+
+    @testset "banded" begin
+        n = 5; p = 5;
+        A = BBBArrowheadMatrix(BandedMatrix(0 => 1:n, 1 => 1:n-1, -1 => 1:n-1),
+                                ntuple(_ -> BandedMatrix((0 => randn(n-1), -1 => randn(n-1)), (n,n-1)), 2),
+                                ntuple(_ -> BandedMatrix((0 => randn(n), 1 => randn(n-1)), (n-1,n)), 3),
+                            fill(BandedMatrix((0 => randn(p) .+ 10, 2 => randn(p-2), -1=> randn(p-1)), (p, p)), n-1))
+
+
+        @test blockbandwidths(A) == (3,2)
+        @test subblockbandwidths(A) == (1,1)
+        @test BandedMatrices.isbanded(A)
+        @test bandwidths(A) == (13,9)
+        @test BandedMatrix(A) == A
+    end
+
+    @testset "eigvals" begin
+        r = range(-1,1; length=4)
+        C = ContinuousPolynomial{1}(r)
+        KR = Block.(OneTo(5))
+        Δ = weaklaplacian(C)[KR,KR]
+        M = grammatrix(C)[KR,KR]
+        ΔB = BandedMatrix(Δ)
+        MB = BandedMatrix(M)
+        @test bandwidths(Δ) == bandwidths(ΔB) == (1,1)
+        @test bandwidths(M) == bandwidths(MB) == (7,7)
+        @test eigvals(Symmetric(Δ)) == eigvals(Symmetric(ΔB))
+        @test eigvals(Symmetric(M)) == eigvals(Symmetric(MB))
+        @test eigvals(Symmetric(Δ), Symmetric(M)) == eigvals(Symmetric(ΔB), Symmetric(MB))
     end
 end

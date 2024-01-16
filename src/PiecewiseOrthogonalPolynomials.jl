@@ -10,15 +10,15 @@ import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBa
 import LazyArrays: paddeddata, AbstractLazyLayout
 import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec, BandedLazyLayouts, AbstractLazyBandedBlockBandedLayout, UpperOrLowerTriangular
 import Base: size, axes, getindex, +, -, *, /, ==, \, OneTo, oneto, replace_in_print_matrix, copy, diff, getproperty, adjoint, transpose, tail, _sum, inv, show, summary
-import LinearAlgebra: BlasInt
 import InfiniteArrays: OneToInf
 import FillArrays: AbstractFill
-import MatrixFactorizations: reversecholcopy
 import FillArrays: SquareEye
 
-export PiecewisePolynomial, ContinuousPolynomial, DirichletPolynomial, Derivative, Block, weaklaplacian, grammatrix
+export PiecewisePolynomial, ContinuousPolynomial, DirichletPolynomial, Derivative, Block, weaklaplacian, grammatrix, BBBArrowheadMatrix
 
 include("arrowhead.jl")
+using .BBBArrowheadMatrices
+
 include("piecewisepolynomial.jl")
 include("continuouspolynomial.jl")
 include("dirichlet.jl")

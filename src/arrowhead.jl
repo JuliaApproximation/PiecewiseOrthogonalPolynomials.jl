@@ -1,3 +1,20 @@
+module BBBArrowheadMatrices
+using LinearAlgebra, BlockArrays, BlockBandedMatrices, BandedMatrices, MatrixFactorizations, LazyBandedMatrices, LazyArrays, ArrayLayouts, InfiniteArrays, FillArrays
+import ArrayLayouts: MemoryLayout, sublayout, sub_materialize, symmetriclayout, transposelayout, SymmetricLayout, HermitianLayout, TriangularLayout, layout_getindex, materialize!, MatLdivVec, AbstractStridedLayout, triangulardata, MatMulMatAdd, MatMulVecAdd, _fill_lmul!, layout_replace_in_print_matrix
+import BandedMatrices: isbanded, bandwidths
+import BlockArrays: BlockSlice, block, blockindex, blockvec
+import BlockBandedMatrices: subblockbandwidths, blockbandwidths, AbstractBandedBlockBandedLayout, AbstractBandedBlockBandedMatrix
+import Base: size, axes, getindex, +, -, *, /, ==, \, OneTo, oneto, replace_in_print_matrix, copy, diff, getproperty, adjoint, transpose, tail, _sum, inv, show, summary
+import LazyArrays: paddeddata, AbstractLazyLayout
+import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec, BandedLazyLayouts, AbstractLazyBandedBlockBandedLayout, UpperOrLowerTriangular
+import LinearAlgebra: BlasInt, eigvals
+import MatrixFactorizations: reversecholcopy
+import FillArrays: AbstractFill
+import FillArrays: SquareEye
+import InfiniteArrays: OneToInf
+
+
+export BBBArrowheadMatrix
 
 """
 BBBArrowheadMatrix
@@ -499,3 +516,21 @@ for Tri in (:LowerTriangular, :UnitLowerTriangular)
         end
     end
 end
+
+####
+# banded interface
+#####
+bbbbandwidth(k, A) = bandwidth(A, k)
+bbbbandwidth(k, A, C...) = +(size(A,k), size.(Base.front(C), k)...) + bandwidth(last(C),k)
+bandwidths(A::BBBArrowheadMatrix) = bbbbandwidth(1, A.A, A.C...),  bbbbandwidth(2, A.A, A.B...)
+isbanded(A::BBBArrowheadMatrix) = true
+
+
+####
+# eigvals
+#####
+
+eigvals(A::Symmetric{<:Real,<:BBBArrowheadMatrix}) = eigvals(Symmetric(BandedMatrix(parent(A))))
+eigvals(A::Symmetric{<:Real,<:BBBArrowheadMatrix}, B::Symmetric{<:Real,<:BBBArrowheadMatrix}) = eigvals(Symmetric(BandedMatrix(parent(A))), Symmetric(BandedMatrix(parent(B))))
+
+end #module
