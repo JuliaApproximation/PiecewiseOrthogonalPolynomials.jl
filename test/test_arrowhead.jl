@@ -156,7 +156,7 @@ import Base: oneto, OneTo
         @test blockbandwidths(A) == (3,2)
         @test subblockbandwidths(A) == (1,1)
         @test BandedMatrices.isbanded(A)
-        @test bandwidths(A) == (14,10)
+        @test bandwidths(A) == (13,9)
         @test BandedMatrix(A) == A
     end
 
