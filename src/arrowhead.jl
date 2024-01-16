@@ -7,7 +7,7 @@ import BlockBandedMatrices: subblockbandwidths, blockbandwidths, AbstractBandedB
 import Base: size, axes, getindex, +, -, *, /, ==, \, OneTo, oneto, replace_in_print_matrix, copy, diff, getproperty, adjoint, transpose, tail, _sum, inv, show, summary
 import LazyArrays: paddeddata, AbstractLazyLayout
 import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec, BandedLazyLayouts, AbstractLazyBandedBlockBandedLayout, UpperOrLowerTriangular
-import LinearAlgebra: BlasInt
+import LinearAlgebra: BlasInt, eigvals
 import MatrixFactorizations: reversecholcopy
 import FillArrays: AbstractFill
 import FillArrays: SquareEye
@@ -520,8 +520,17 @@ end
 ####
 # banded interface
 #####
-
-bandwidths(A::BBBArrowheadMatrix) = +(size(A.A,1), size.(Base.front(A.C),1)...) + bandwidth(last(A.C),1)+1, +(size(A.A,2), size.(Base.front(A.B),2)...) + bandwidth(last(A.B),2)+1
+bbbbandwidth(k, A) = bandwidth(A, k)
+bbbbandwidth(k, A, C...) = +(size(A,k), size.(Base.front(C), k)...) + bandwidth(last(C),k)
+bandwidths(A::BBBArrowheadMatrix) = bbbbandwidth(1, A.A, A.C...),  bbbbandwidth(2, A.A, A.B...)
 isbanded(A::BBBArrowheadMatrix) = true
+
+
+####
+# eigvals
+#####
+
+eigvals(A::Symmetric{<:Real,<:BBBArrowheadMatrix}) = eigvals(Symmetric(BandedMatrix(parent(A))))
+eigvals(A::Symmetric{<:Real,<:BBBArrowheadMatrix}, B::Symmetric{<:Real,<:BBBArrowheadMatrix}) = eigvals(Symmetric(BandedMatrix(parent(A))), Symmetric(BandedMatrix(parent(B))))
 
 end #module

@@ -10,7 +10,6 @@ import ContinuumArrays: @simplify, factorize, TransformFactorization, AbstractBa
 import LazyArrays: paddeddata, AbstractLazyLayout
 import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec, BandedLazyLayouts, AbstractLazyBandedBlockBandedLayout, UpperOrLowerTriangular
 import Base: size, axes, getindex, +, -, *, /, ==, \, OneTo, oneto, replace_in_print_matrix, copy, diff, getproperty, adjoint, transpose, tail, _sum, inv, show, summary
-import LinearAlgebra: BlasInt
 import InfiniteArrays: OneToInf
 import FillArrays: AbstractFill
 import FillArrays: SquareEye
