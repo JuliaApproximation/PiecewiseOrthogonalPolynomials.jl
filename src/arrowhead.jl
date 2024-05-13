@@ -269,8 +269,7 @@ end
 
 
 
-function MatrixFactorizations._reverse_chol!(A::BBBArrowheadMatrix, ::Type{UpperTriangular})
-    
+function MatrixFactorizations.reversecholesky_layout!(::ArrowheadLayouts, A::AbstractMatrix, ::Type{UpperTriangular})
     Threads.@threads for B in A.D
         reversecholesky!(Symmetric(B))
     end

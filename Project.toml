@@ -1,7 +1,7 @@
 name = "PiecewiseOrthogonalPolynomials"
 uuid = "4461d12d-4663-4550-8580-cb764c85e20f"
 authors = ["Sheehan Olver <solver@mac.com>"]
-version = "0.4.1"
+version = "0.4.2"
 
 [deps]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
@@ -31,7 +31,7 @@ InfiniteArrays = "0.13"
 InfiniteLinearAlgebra = "0.7"
 LazyArrays = "1.8.2"
 LazyBandedMatrices = "0.9.1"
-MatrixFactorizations = "2.0"
+MatrixFactorizations = "2.2"
 QuasiArrays = "0.11"
 julia = "1.9"
 
