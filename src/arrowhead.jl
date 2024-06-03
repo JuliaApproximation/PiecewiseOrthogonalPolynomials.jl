@@ -6,12 +6,14 @@ import BlockArrays: BlockSlice, block, blockindex, blockvec
 import BlockBandedMatrices: subblockbandwidths, blockbandwidths, AbstractBandedBlockBandedLayout, AbstractBandedBlockBandedMatrix
 import Base: size, axes, getindex, +, -, *, /, ==, \, OneTo, oneto, replace_in_print_matrix, copy, diff, getproperty, adjoint, transpose, tail, _sum, inv, show, summary
 import LazyArrays: paddeddata, AbstractLazyLayout
-import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec, BandedLazyLayouts, AbstractLazyBandedBlockBandedLayout, UpperOrLowerTriangular
-import LinearAlgebra: BlasInt, eigvals
+import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec, AbstractLazyBandedBlockBandedLayout
+import LinearAlgebra: BlasInt, eigvals, UpperOrLowerTriangular
 import MatrixFactorizations: reversecholcopy
 import FillArrays: AbstractFill
 import FillArrays: SquareEye
 import InfiniteArrays: OneToInf
+
+import LazyBandedMatrices.LazyArraysBandedMatricesExt: BandedLazyLayouts
 
 
 export BBBArrowheadMatrix
