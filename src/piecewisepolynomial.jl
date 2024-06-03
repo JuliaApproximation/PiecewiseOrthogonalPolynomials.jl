@@ -78,7 +78,7 @@ end
 function _perm_blockvec(X::AbstractArray{T,3}, dims=1) where T
     @assert dims == 1
     X1 = _perm_blockvec(X[:,:,1])
-    ret = PseudoBlockMatrix{T}(undef, (axes(X1,1), axes(X,3)))
+    ret = BlockedMatrix{T}(undef, (axes(X1,1), axes(X,3)))
     ret[:,1] = X1
     for k = 2:size(X,3)
         ret[:,k] = _perm_blockvec(X[:,:,k])
@@ -93,7 +93,7 @@ function _perm_blockvec(X::AbstractArray{T,4}, dims=(1,2)) where T
     @assert dims == 1:2 || dims == (1,2)
     X1 = _perm_blockvec(X[:,:,1,1])
     X2 = _perm_blockvec(X[1,1,:,:])
-    ret = PseudoBlockMatrix{T}(undef, (axes(X1,1), axes(X2,1)))
+    ret = BlockedMatrix{T}(undef, (axes(X1,1), axes(X2,1)))
     for k = axes(X,1), j = axes(X,2), l = axes(X,3), m = axes(X,4)
         ret[Block(k)[j], Block(l)[m]] = X[k,j,l,m]
     end

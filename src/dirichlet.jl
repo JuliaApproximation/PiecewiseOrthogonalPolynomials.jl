@@ -80,7 +80,7 @@ _tensorsize2dirichletblocks(M,N, Ns...) = (Vcat(N-1, Fill(N, M-2)), _tensorsize2
     
 function *(Pl::DirichletPolynomialTransform{T,<:Any,<:Any,Int}, X::AbstractMatrix{T}) where T
     dat = Pl.R * (Pl.legendretransform*X)
-    cfs = PseudoBlockArray{T}(undef,  _tensorsize2dirichletblocks(size(X)...)...)
+    cfs = BlockedArray{T}(undef,  _tensorsize2dirichletblocks(size(X)...)...)
     dims = Pl.dims
     @assert dims == 1
 
@@ -125,7 +125,7 @@ function _dirichletpolyinds2blocks(k, j)
 end
 function *(Pl::DirichletPolynomialTransform{T}, X::AbstractArray{T,4}) where T
     dat = Pl.R * (Pl.legendretransform*X)
-    cfs = PseudoBlockArray{T}(undef,  _tensorsize2dirichletblocks(size(X)...)...)
+    cfs = BlockedArray{T}(undef,  _tensorsize2dirichletblocks(size(X)...)...)
     dims = Pl.dims
     @assert dims == (1,2)
 

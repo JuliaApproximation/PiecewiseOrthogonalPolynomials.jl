@@ -129,7 +129,7 @@ import Base: oneto, OneTo
         x = M[KR,KR] * transform(C, exp)[KR]
         @time c = F \ x;
 
-        @test_broken c isa PseudoBlockArray # TODO: overload copy_similar in BlockArrays.jl
+        @test_broken c isa BlockedArray # TODO: overload copy_similar in BlockArrays.jl
 
         @test (C[:,KR] * c)[0.1] ≈ 1.1952730862177243
     end
