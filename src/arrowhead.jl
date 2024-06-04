@@ -6,12 +6,14 @@ import BlockArrays: BlockSlice, block, blockindex, blockvec
 import BlockBandedMatrices: subblockbandwidths, blockbandwidths, AbstractBandedBlockBandedLayout, AbstractBandedBlockBandedMatrix
 import Base: size, axes, getindex, +, -, *, /, ==, \, OneTo, oneto, replace_in_print_matrix, copy, diff, getproperty, adjoint, transpose, tail, _sum, inv, show, summary
 import LazyArrays: paddeddata, AbstractLazyLayout
-import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec, BandedLazyLayouts, AbstractLazyBandedBlockBandedLayout, UpperOrLowerTriangular
-import LinearAlgebra: BlasInt, eigvals
+import LazyBandedMatrices: BlockBroadcastMatrix, BlockVec, AbstractLazyBandedBlockBandedLayout
+import LinearAlgebra: BlasInt, eigvals, UpperOrLowerTriangular
 import MatrixFactorizations: reversecholcopy
 import FillArrays: AbstractFill
 import FillArrays: SquareEye
 import InfiniteArrays: OneToInf
+
+import LazyBandedMatrices.LazyArraysBandedMatricesExt: BandedLazyLayouts
 
 
 export BBBArrowheadMatrix
@@ -186,8 +188,8 @@ end
 
 function materialize!(M::MatMulVecAdd{<:ArrowheadLayouts,<:AbstractStridedLayout,<:AbstractStridedLayout})
     α, A, x_in, β, y_in = M.α, M.A, M.B, M.β, M.C
-    x = PseudoBlockArray(x_in, (axes(A,2), ))
-    y = PseudoBlockArray(y_in, (axes(A,1),))
+    x = BlockedArray(x_in, (axes(A,2), ))
+    y = BlockedArray(y_in, (axes(A,1),))
     m,n = size(A.A)
 
     _fill_lmul!(β, y)
@@ -209,8 +211,8 @@ end
 
 function materialize!(M::MatMulMatAdd{<:ArrowheadLayouts,<:AbstractColumnMajor,<:AbstractColumnMajor})
     α, A, X_in, β, Y_in = M.α, M.A, M.B, M.β, M.C
-    X = PseudoBlockArray(X_in, (axes(A,2), axes(X_in,2)))
-    Y = PseudoBlockArray(Y_in, (axes(A,1), axes(X_in,2)))
+    X = BlockedArray(X_in, (axes(A,2), axes(X_in,2)))
+    Y = BlockedArray(Y_in, (axes(A,1), axes(X_in,2)))
     m,n = size(A.A)
 
     _fill_lmul!(β, Y)
@@ -232,8 +234,8 @@ end
 
 function materialize!(M::MatMulMatAdd{<:AbstractColumnMajor,<:ArrowheadLayouts,<:AbstractColumnMajor})
     α, X_in, A, β, Y_in = M.α, M.A, M.B, M.β, M.C
-    X = PseudoBlockArray(X_in, (axes(X_in,1), axes(A,1)))
-    Y = PseudoBlockArray(Y_in, (axes(Y_in,1), axes(A,2)))
+    X = BlockedArray(X_in, (axes(X_in,1), axes(A,1)))
+    Y = BlockedArray(Y_in, (axes(Y_in,1), axes(A,2)))
     m,n = size(A.A)
 
     _fill_lmul!(β, Y)
@@ -439,7 +441,7 @@ for (UNIT, Tri) in (('U',UnitUpperTriangular), ('N', UpperTriangular))
         N = blocksize(P,1)
 
         # impose block structure
-        b = PseudoBlockArray(dest, (axes(P,1),))
+        b = BlockedArray(dest, (axes(P,1),))
         b̃_1 = view(b, Block(1))
 
         for K = 1:min(N-1,length(B))
@@ -463,7 +465,7 @@ for (UNIT, Tri) in (('U',UnitLowerTriangular), ('N', LowerTriangular))
         m = length(D)
 
         # impose block structure
-        b = PseudoBlockArray(dest, (axes(P,1),))
+        b = BlockedArray(dest, (axes(P,1),))
         b̃_1 = view(b, Block(1))
         ArrayLayouts.ldiv!($Tri(A), b̃_1)
 
