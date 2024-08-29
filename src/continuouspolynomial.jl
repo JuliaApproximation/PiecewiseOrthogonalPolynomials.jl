@@ -123,7 +123,7 @@ function *(Pl::ContinuousPolynomialTransform{T,<:Any,<:Any,Int}, X::AbstractMatr
         end
     end
     cfs[Block.(2:M-1)] .= vec(dat[3:end,:]')
-    cfs
+    return cfs
 end
 
 function \(Pl::ContinuousPolynomialTransform{T,<:Any,<:Any,Int}, cfs::AbstractVector{T}) where T
@@ -165,7 +165,7 @@ function *(Pl::ContinuousPolynomialTransform{T}, X::AbstractArray{T,4}) where T
     for k = 1:M, j = 1:N, l = 1:O, m = 1:P
         cfs[_contpolyinds2blocks(k,j), _contpolyinds2blocks(l,m)] = dat[k,j,l,m]
     end
-    cfs
+    return cfs
 end
 
 function \(Pl::ContinuousPolynomialTransform{T}, cfs::AbstractMatrix{T}) where T

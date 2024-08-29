@@ -22,7 +22,7 @@ function repeatgrid(ax, g, pts)
     for j in axes(ret, 2)
         ret[:, j] = affine(ax, pts[j] .. pts[j+1])[g]
     end
-    ret
+    return ret
 end
 
 
@@ -83,7 +83,7 @@ function _perm_blockvec(X::AbstractArray{T,3}, dims=1) where T
     for k = 2:size(X,3)
         ret[:,k] = _perm_blockvec(X[:,:,k])
     end
-    ret
+    return ret
 end
 
 
@@ -95,7 +95,7 @@ function _perm_blockvec(X::AbstractArray{T,4}, dims=(1,2)) where T
     for k = axes(X,1), j = axes(X,2), l = axes(X,3), m = axes(X,4)
         ret[Block(k)[j], Block(l)[m]] = X[k,j,l,m]
     end
-    ret
+    return ret
 end
 
 function _inv_perm_blockvec(X::AbstractMatrix{T}, dims=(1,2)) where T
@@ -113,7 +113,7 @@ function _inv_perm_blockvec(X::AbstractMatrix{T}, dims=(1,2)) where T
             ret[k,j,l] = X[Block(k)[j], Block(1)[l]]
         end
     end
-    ret
+    return ret
 end
 
 function _perm_blockvec(X::AbstractArray{T,5}, dims=(1,2)) where T
@@ -124,7 +124,7 @@ function _perm_blockvec(X::AbstractArray{T,5}, dims=(1,2)) where T
     for k = 2:lastindex(ret,3)
         ret[:, :, k] = _perm_blockvec(X[:,:,:,:,k])
     end
-    ret
+    return ret
 end
 
 function _inv_perm_blockvec(X::AbstractArray{T,3}, dims=(1,2)) where T
@@ -136,7 +136,7 @@ function _inv_perm_blockvec(X::AbstractArray{T,3}, dims=(1,2)) where T
     for k = axes(ret,5)
         ret[:,:,:,:,k] = _inv_perm_blockvec(X[:,:,k])
     end
-    ret
+    return ret
 end
 
 \(F::ApplyPlan{<:Any,typeof(_perm_blockvec)}, X::AbstractArray) = F.F \ _inv_perm_blockvec(X, F.args...)
