@@ -450,7 +450,7 @@ for (UNIT, Tri) in (('U',UnitUpperTriangular), ('N', UpperTriangular))
 
         ArrayLayouts.ldiv!($Tri(A), b̃_1)
 
-        dest
+        return dest
     end
 end
 for (UNIT, Tri) in (('U',UnitLowerTriangular), ('N', LowerTriangular))
@@ -479,7 +479,7 @@ for (UNIT, Tri) in (('U',UnitLowerTriangular), ('N', LowerTriangular))
             ArrayLayouts.ldiv!($Tri(D[k]), view(dest, n+k:m:length(dest)))
         end
 
-        dest
+        return dest
     end
 end
 
