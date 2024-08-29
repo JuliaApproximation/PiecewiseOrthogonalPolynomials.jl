@@ -68,16 +68,17 @@ using LazyBandedMatrices: BlockVec
 
     @testset "tensor transform" begin
         for P in (PiecewisePolynomial(Chebyshev(), range(0,1; length=3)), PiecewisePolynomial(Legendre(), range(0,1; length=3)))
-            xy, pl = plan_grid_transform(P, (Block(10),Block(11), 2), (1,2))
-            @test size(pl) == (10, 2, 11, 2, 2)
+            xy, pl = plan_grid_transform(P, (Block(10),Block(11), 3), (1,2))
+            @test size(pl) == (10, 2, 11, 2, 3)
             x,y=first(xy),last(xy)
             y = reshape(y,1,1,size(y)...)
 
-            X = [exp.(x .+ cos.(y)) ;;;;; exp.(y .+ sin.(x))]
+            X = [exp.(x .+ cos.(y)) ;;;;; exp.(y .+ sin.(x)) ;;;;; cos.(x .+ sin.(y))]
             C = pl*X
 
             @test P[0.1, Block.(1:10)]' * C[:,:,1] * P[0.2, Block.(1:11)] ≈ exp(0.1 + cos(0.2))
             @test P[0.1, Block.(1:10)]' * C[:,:,2] * P[0.2, Block.(1:11)] ≈ exp(0.2 + sin(0.1))
+            @test P[0.1, Block.(1:10)]' * C[:,:,3] * P[0.2, Block.(1:11)] ≈ cos(0.1 + sin(0.2))
 
             @test pl\C ≈ X
         end

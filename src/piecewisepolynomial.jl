@@ -119,7 +119,7 @@ end
 function _perm_blockvec(X::AbstractArray{T,5}, dims=(1,2)) where T
     @assert dims == 1:2 || dims == (1,2)
     X1 = _perm_blockvec(X[:,:,:,:,1])
-    ret = BlockedArray{T}(undef, (axes(X1,1), axes(X1,2), 1:2))
+    ret = BlockedArray{T}(undef, (axes(X1,1), axes(X1,2), axes(X,5)))
     ret[:, :, 1] = X1
     for k = 2:lastindex(ret,3)
         ret[:, :, k] = _perm_blockvec(X[:,:,:,:,k])
