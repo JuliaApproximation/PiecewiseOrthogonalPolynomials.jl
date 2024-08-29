@@ -87,8 +87,6 @@ function _perm_blockvec(X::AbstractArray{T,3}, dims=1) where T
 end
 
 
-
-
 function _perm_blockvec(X::AbstractArray{T,4}, dims=(1,2)) where T
     @assert dims == 1:2 || dims == (1,2)
     X1 = _perm_blockvec(X[:,:,1,1])
@@ -101,12 +99,19 @@ function _perm_blockvec(X::AbstractArray{T,4}, dims=(1,2)) where T
 end
 
 function _inv_perm_blockvec(X::AbstractMatrix{T}, dims=(1,2)) where T
-    @assert dims == 1:2 || dims == (1,2)
+    @assert dims == 1:2 || dims == (1,2) || dims == 1
     M,N = blocksize(X)
     m,n = size(X)
-    ret = Array{T}(undef, M, m ÷ M, N, n ÷ N)
-    for k = axes(ret,1), j = axes(ret,2), l = axes(ret,3), m = axes(ret,4)
-        ret[k,j,l,m] = X[Block(k)[j], Block(l)[m]]
+    if dims == 1:2 || dims == (1,2)
+        ret = Array{T}(undef, M, m ÷ M, N, n ÷ N)
+        for k = axes(ret,1), j = axes(ret,2), l = axes(ret,3), m = axes(ret,4)
+            ret[k,j,l,m] = X[Block(k)[j], Block(l)[m]]
+        end
+    elseif dims == 1
+        ret = Array{T}(undef, M, m ÷ M, n ÷ N)
+        for k = axes(ret,1), j = axes(ret,2), l = axes(ret,3)
+            ret[k,j,l] = X[Block(k)[j], Block(1)[l]]
+        end
     end
     ret
 end

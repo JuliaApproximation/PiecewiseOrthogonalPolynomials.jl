@@ -31,6 +31,7 @@ using LazyBandedMatrices: BlockVec
                 x,F = plan_grid_transform(P, (Block(10),2), 1)
                 KR = Block.(1:10)
                 @test F * [exp.(x) ;;; cos.(x)] ≈ [transform(P,exp)[KR] transform(P,cos)[KR]]
+                @test F \ (F * [exp.(x) ;;; cos.(x)]) ≈ [exp.(x) ;;; cos.(x)]
 
                 t = axes(P,1)
                 @test (P \ [cos.(t) sin.(t)])[KR,:] ≈ [(P\cos.(t))[KR,:] (P\sin.(t))[KR,:]]
