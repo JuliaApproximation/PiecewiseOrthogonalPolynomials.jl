@@ -116,6 +116,29 @@ function _inv_perm_blockvec(X::AbstractMatrix{T}, dims=(1,2)) where T
     ret
 end
 
+function _perm_blockvec(X::AbstractArray{T,5}, dims=(1,2)) where T
+    @assert dims == 1:2 || dims == (1,2)
+    X1 = _perm_blockvec(X[:,:,:,:,1])
+    ret = BlockedArray{T}(undef, (axes(X1,1), axes(X1,2), 1:2))
+    ret[:, :, 1] = X1
+    for k = 2:lastindex(ret,3)
+        ret[:, :, k] = _perm_blockvec(X[:,:,:,:,k])
+    end
+    ret
+end
+
+function _inv_perm_blockvec(X::AbstractArray{T,3}, dims=(1,2)) where T
+    @assert dims == 1:2 || dims == (1,2)
+    M,N,L = blocksize(X)
+    m,n,ℓ = size(X)
+
+    ret = Array{T}(undef, M, m ÷ M, N, n ÷ N, ℓ÷L)
+    for k = axes(ret,5)
+        ret[:,:,:,:,k] = _inv_perm_blockvec(X[:,:,k])
+    end
+    ret
+end
+
 \(F::ApplyPlan{<:Any,typeof(_perm_blockvec)}, X::AbstractArray) = F.F \ _inv_perm_blockvec(X, F.args...)
 
 _interlace_const(n) = ()
@@ -139,6 +162,13 @@ end
 function plan_transform(P::PiecewisePolynomial, (M,n)::Tuple{Block{1},Int}, dims::Int)
     @assert dims == 1
     F = plan_transform(P.basis, (Int(M), length(P.points)-1, n), dims)
+    ApplyPlan(_perm_blockvec, F, (dims,))
+end
+
+function plan_transform(P::PiecewisePolynomial, (N,M,n)::Tuple{Block{1},Block{1},Int}, dims=ntuple(identity,Val(2)))
+    @assert dims == 1:2 || dims == ntuple(identity,Val(2))
+    Ns = (N,M)
+    F = plan_transform(P.basis, (_interlace_const(length(P.points)-1, Int.(Ns)...)..., n), _doubledims(dims...))
     ApplyPlan(_perm_blockvec, F, (dims,))
 end
 
