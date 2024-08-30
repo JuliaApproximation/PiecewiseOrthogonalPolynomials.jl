@@ -206,7 +206,7 @@ function materialize!(M::MatMulVecAdd{<:ArrowheadLayouts,<:AbstractStridedLayout
     for k = 1:d
         mul!(view(y, m+k:d:size(y,1)), A.D[k], view(x, n+k:d:size(x,1)), α, one(α))
     end
-    y_in
+    return y_in
 end
 
 function materialize!(M::MatMulMatAdd{<:ArrowheadLayouts,<:AbstractColumnMajor,<:AbstractColumnMajor})
@@ -229,7 +229,7 @@ function materialize!(M::MatMulMatAdd{<:ArrowheadLayouts,<:AbstractColumnMajor,<
     for k = 1:d
         mul!(view(Y, m+k:d:size(Y,1), :), A.D[k], view(X, n+k:d:size(Y,1), :), α, one(α))
     end
-    Y_in
+    return Y_in
 end
 
 function materialize!(M::MatMulMatAdd{<:AbstractColumnMajor,<:ArrowheadLayouts,<:AbstractColumnMajor})
@@ -252,7 +252,7 @@ function materialize!(M::MatMulMatAdd{<:AbstractColumnMajor,<:ArrowheadLayouts,<
     for k = 1:d
         mul!(view(Y, :, n+k:d:size(Y,2)), view(X, :, m+k:d:size(Y,2)), A.D[k], α, one(α))
     end
-    Y_in
+    return Y_in
 end
 
 
@@ -450,7 +450,7 @@ for (UNIT, Tri) in (('U',UnitUpperTriangular), ('N', UpperTriangular))
 
         ArrayLayouts.ldiv!($Tri(A), b̃_1)
 
-        dest
+        return dest
     end
 end
 for (UNIT, Tri) in (('U',UnitLowerTriangular), ('N', LowerTriangular))
@@ -479,7 +479,7 @@ for (UNIT, Tri) in (('U',UnitLowerTriangular), ('N', LowerTriangular))
             ArrayLayouts.ldiv!($Tri(D[k]), view(dest, n+k:m:length(dest)))
         end
 
-        dest
+        return dest
     end
 end
 

@@ -91,7 +91,7 @@ function *(Pl::DirichletPolynomialTransform{T,<:Any,<:Any,Int}, X::AbstractMatri
         end
     end
     cfs[Block.(2:M-1)] .= vec(dat[3:end,:]')
-    cfs
+    return cfs
 end
 
 function \(Pl::DirichletPolynomialTransform{T,<:Any,<:Any,Int}, cfs::AbstractVector{T}) where T
@@ -137,7 +137,7 @@ function *(Pl::DirichletPolynomialTransform{T}, X::AbstractArray{T,4}) where T
         l == 2 && m == P && continue
         cfs[_dirichletpolyinds2blocks(k,j), _dirichletpolyinds2blocks(l,m)] = dat[k,j,l,m]
     end
-    cfs
+    return cfs
 end
     
 function \(Pl::DirichletPolynomialTransform{T}, cfs::AbstractMatrix{T}) where T
