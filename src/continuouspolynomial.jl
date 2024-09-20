@@ -112,16 +112,20 @@ function *(Pl::ContinuousPolynomialTransform{T,<:Any,<:Any,Int}, X::AbstractMatr
     dims = Pl.dims
     @assert dims == 1
 
-    M,N = size(X,1), size(X,2)
+    M,N = size(X)
     if size(dat,1) ≥ 1
         cfs[Block(1)[1]] = dat[1,1]
+
+        # check that hat functions between elements are consistent
         for j = 1:N-1
-            isapprox(dat[2,j], dat[1,j+1]; atol=1000*M*eps()) || throw(ArgumentError("Discontinuity in data on order of $(abs(dat[2,j]- dat[1,j+1]))."))
+            # TODO: don't check since its fine to return "bad" approximation
+            isapprox(dat[2,j], dat[1,j+1]; atol=1000*M*eps(T)) || throw(ArgumentError("Discontinuity in data on order of $(abs(dat[2,j]- dat[1,j+1]))."))
         end
         for j = 1:N
-            cfs[Block(1)[j+1]] = dat[2,j]
+            cfs[Block(1)[j+1]] = (dat[2,j] + dat[1,j+1])/2 # average to be more robust
         end
     end
+    # populate coefficients of bubble functions
     cfs[Block.(2:M-1)] .= vec(dat[3:end,:]')
     return cfs
 end
