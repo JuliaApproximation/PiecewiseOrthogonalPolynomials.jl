@@ -16,7 +16,7 @@ plot(C[:,Block.(2:3)])
 
 The mass matrix can be constructed via:
 ```julia
-M = C'C
+M = grammatrix(C)
 ```
 We can also construct the stiffness matrix:
 ```julia
