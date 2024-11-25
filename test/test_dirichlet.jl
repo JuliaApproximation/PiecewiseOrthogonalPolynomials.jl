@@ -79,4 +79,14 @@ using PiecewiseOrthogonalPolynomials: BBBArrowheadMatrix, plan_grid_transform
         @test sprint(show, C) == "ContinuousPolynomial{1}(-1:1)"
         @test sprint(show, P) == "ContinuousPolynomial{0}(-1:1)"
     end
+
+    @testset "diff" begin
+        Q = DirichletPolynomial(range(-1,1; length=4))
+        @test diff(Q)[0.1,1:5] ≈ [-1,0,1.6,0,-0.92]
+        u = expand(Q, x -> (1-x^2)*exp(x))
+        let x = 0.1
+            @test diff(u)[x] ≈ (1-2x-x^2)*exp(x)
+            @test diff(diff(u))[x] ≈ (-1-4x-x^2)*exp(x)
+        end
+    end
 end
