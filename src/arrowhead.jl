@@ -13,7 +13,9 @@ import FillArrays: AbstractFill
 import FillArrays: SquareEye
 import InfiniteArrays: OneToInf
 
-import LazyBandedMatrices.LazyArraysBandedMatricesExt: BandedLazyLayouts
+const LazyArraysBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBandedMatricesExt)
+
+const BandedLazyLayouts = LazyArraysBandedMatricesExt.BandedLazyLayouts
 
 
 export BBBArrowheadMatrix
