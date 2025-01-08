@@ -25,6 +25,8 @@ struct SemiseparableBBBArrowheadMatrix{T} <: AbstractBlockBandedMatrix{T}
 
 end
 
+axes(::SemiseparableBBBArrowheadMatrix) = ...
+
 function getindex(L::SemiseparableBBBArrowheadMatrix{T}, Kk::BlockIndex{1}, Jj::BlockIndex{1})::T where T
     K,k = block(Kk),blockindex(Kk)
     J,j = block(Jj),blockindex(Jj)
