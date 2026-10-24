@@ -207,6 +207,25 @@ end
     (A\C) * (C'B)
 end
 
+# The interior deltas pair with the hat functions and the rest of ContinuousPolynomial{-1}, which is (b-a)/2 * diff(legendre(a..b))
+# including deltas, is orthogonal to hat functions and diagonal against the bubble functions.
+function _diracdirichlet(H::ContinuousPolynomial{-1}, Q::DirichletPolynomial)
+    T = promote_type(eltype(H), eltype(Q))
+    @assert H.points == Q.points
+    N = length(H.points)
+    h = diff(convert(AbstractVector{T}, H.points))
+    BBBArrowheadMatrix{T}(Eye{T}(N-2), (), (), [Diagonal(h_j ./ (convert(T,3):2:∞)) for h_j in h])
+end
+
+function _diracdirichlet(H::ContinuousPolynomial{-1,<:Any,<:AbstractRange}, Q::DirichletPolynomial{<:Any,<:AbstractRange})
+    T = promote_type(eltype(H), eltype(Q))
+    @assert H.points == Q.points
+    N = length(H.points)
+    BBBArrowheadMatrix{T}(Eye{T}(N-2), (), (), Fill(Diagonal(step(H.points) ./ (convert(T,3):2:∞)), N-1))
+end
+
+@simplify *(Hc::QuasiAdjoint{<:Any,<:ContinuousPolynomial{-1}}, Q::DirichletPolynomial) = _diracdirichlet(Hc', Q)
+
 function diff(Q::DirichletPolynomial{T}; dims=1) where T
     C = ContinuousPolynomial{1}(Q)
     diff(C; dims=dims) * (C \ Q)

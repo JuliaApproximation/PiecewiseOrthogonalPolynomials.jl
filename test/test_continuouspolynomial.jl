@@ -2,6 +2,7 @@ using PiecewiseOrthogonalPolynomials, StaticArrays, InfiniteArrays, ContinuumArr
 using LazyBandedMatrices: MemoryLayout, AbstractBandedBlockBandedLayout, BlockVec
 using ForwardDiff: derivative
 using ContinuumArrays: plan_grid_transform
+import RecipesBase
 
 @testset "ContinuousPolynomial" begin
     @testset "transform" begin
@@ -222,5 +223,43 @@ using ContinuumArrays: plan_grid_transform
 
         f = expand(C,exp)
         @test diff(diff(f))[0.1] ≈ exp(0.1)
+
+        # conversion is consistent with the deltas in diff
+        f = expand(P, exp)
+        @test ((H \ P) * coefficients(f))[1:50] ≈ coefficients(diff(f))[1:50]
+    end
+
+    @testset "plotting Dirac" begin
+        for r in (range(-1,1; length=4), range(0,5; length=6))
+            P = ContinuousPolynomial{0}(r)
+            # exp is continuous so has no deltas, but a jump of 1 at r[2] adds a delta
+            e = coefficients(expand(P, exp))
+            f = diff(P * (e + [0; ones(length(r)-2); zeros(∞)]))
+
+            g, δ = ContinuumArrays.splitdiracs(f)
+            @test g[0.1] ≈ f[0.1] ≈ exp(0.1)
+            @test basis(δ) == Spline{-1}(r)
+            @test coefficients(δ) ≈ [1; zeros(length(r)-3)] atol=1E-12
+
+            x, v = ContinuumArrays.plotgridvalues(f)
+            xg, vg = ContinuumArrays.plotgridvalues(g)
+            xδ, vδ = ContinuumArrays.plotgridvalues(δ)
+            @test isequal(x, [xg; NaN; xδ])
+            @test isequal(v, [vg; NaN; vδ])
+
+            rep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), f)
+            @test rep[1].args == (g,)
+            @test rep[2].args == (δ,)
+            @test rep[2].plotattributes[:primary] == false
+        end
+
+        # a regular function in ContinuousPolynomial{-1} has no deltas
+        r = [0, 0.5, 2, 2.25, 3]
+        P = ContinuousPolynomial{0}(r)
+        H = ContinuousPolynomial{-1}(r)
+        f = H * ((H \ P) * coefficients(expand(P, exp)))
+        g, δ = ContinuumArrays.splitdiracs(f)
+        @test g[0.1] ≈ exp(0.1)
+        @test coefficients(δ) ≈ zeros(length(r)-2) atol=1E-12
     end
 end

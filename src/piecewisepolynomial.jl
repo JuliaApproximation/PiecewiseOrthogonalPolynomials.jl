@@ -3,6 +3,14 @@ abstract type AbstractPiecewisePolynomial{order,T,P<:AbstractVector} <: Basis{T}
 struct PiecewisePolynomialLayout{order} <: AbstractBasisLayout end
 MemoryLayout(::Type{<:AbstractPiecewisePolynomial{order}}) where order = PiecewisePolynomialLayout{order}()
 
+"""
+    PiecewisePolynomial(basis, points)
+
+is a discontinuous piecewise basis on `first(points)..last(points)` built by affinely mapping `basis`
+(e.g. `Legendre()`) to each element `points[j]..points[j+1]`. The columns are blocked by degree:
+`Block(k)` contains the `k`-th function of `basis` on each of the `length(points)-1` elements, ordered by element.
+`ContinuousPolynomial{0}(points)` is equivalent to `PiecewisePolynomial(Legendre(), points)`.
+"""
 struct PiecewisePolynomial{T,Bas,P<:AbstractVector} <: AbstractPiecewisePolynomial{0,T,P}
     basis::Bas
     points::P

@@ -2,7 +2,8 @@
    ContinuousPolynomial{0}  is piecewise Legendre
    ContinuousPolynomial{1}  is hat functions in first block and rest are bubble functions Ultraspherical(-1/2)
    ContinuousPolynomial{-1} is delta functions (non-boundary) and rest are Ultraspherical(1/2) == diff(Legendre())[:,2:end] in the interior of the elements.
-   Between elements we are consistent with differentiating Legendre: we have delta functions of (-1)^k on the left and -1 on the right.
+   Between elements we are consistent with differentiating Legendre: the k-th function in an element a..b is (b-a)/2 * diff(legendre(a..b))[:,k+1],
+   that is, it includes delta functions of (b-a)/2 * (-1)^k on the left and -(b-a)/2 on the right (only at interior points).
 """
 struct ContinuousPolynomial{order,T,P<:AbstractVector} <: AbstractPiecewisePolynomial{order,T,P}
     points::P
@@ -79,6 +80,22 @@ for grd in (:grid, :plotgrid)
         $grd(C::ContinuousPolynomial, n::Block{1}) = $grd(PiecewisePolynomial(C), n) 
         $grd(C::ContinuousPolynomial, n::Int) = $grd(C, findblock(axes(C,2), n))
     end
+end
+
+# The regular part is piecewise Ultraspherical(3/2). The deltas at the interior points come from the first block
+# and from the deltas of (b-a)/2 * diff(legendre(a..b)) in the other blocks.
+function splitdiracs(f::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{ContinuousPolynomial{-1,T},Any}}) where T
+    H,c = f.args
+    r = H.points
+    N = length(r)
+    h = diff(r)
+    M = cld(max(last(colsupport(c)) - (N-2), 0), N-1) # number of non-delta blocks to include
+    C = reshape(Vector(c[N-1:N-2+M*(N-1)]), N-1, M) # coefficients by element × degree
+    left = C * [(-1)^k for k=1:M] # delta at left of each element, scaled by (b-a)/2
+    right = C * ones(M) # minus delta at right of each element, scaled by (b-a)/2
+    δ = Vector(c[1:N-2]) .+ h[2:end] .* left[2:end] ./ 2 .- h[1:end-1] .* right[1:end-1] ./ 2
+    U = PiecewisePolynomial(Ultraspherical{T}(3one(real(T))/2), r)
+    U * c[N-1:end], Spline{-1,T}(r) * δ
 end
 
 struct ContinuousPolynomialTransform{T, Pl<:Plan{T}, RRs, Dims} <: Plan{T}
@@ -241,10 +258,13 @@ end
     N = length(P.points)
     R = Ultraspherical{T}(3one(T)/2)\Legendre{T}()
 
-    # The basis for D is defined in each element a..b as diff(legendre(a..b)) with delta functions. But note that
-    # the delta functions don't change! We need to kill off the deltas in conversion.
-    BBBArrowheadMatrix(_BandedMatrix(Vcat(Fill(-one(T),1,N-1), Fill(one(T),1,N-1)), N-2, 0, 1),
-        (_BandedMatrix(Ones{T}(2,N-1), N-2, 0, 1),),
+    h = diff(convert(AbstractVector{T}, P.points))
+
+    # The basis for D is defined in each element a..b as (b-a)/2 * diff(legendre(a..b)), including
+    # the delta functions at the interior points. We need to kill off the deltas in conversion.
+    # These only appear for P_0 and P_1 as they cancel for P_k == (C^(3/2)_k - C^(3/2)_(k-2))/(2k+1).
+    BBBArrowheadMatrix(_BandedMatrix(Vcat(h'/2, h'/2), N-2, 0, 1),
+        (_BandedMatrix(Vcat(-h'/6, h'/6), N-2, 0, 1),),
         (SquareEye{T}(N-1),),
         Fill(R[:,2:end], N-1))
 end
