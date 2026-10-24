@@ -1,5 +1,6 @@
 using PiecewiseOrthogonalPolynomials, ClassicalOrthogonalPolynomials, ContinuumArrays, Test
 using PiecewiseOrthogonalPolynomials: BBBArrowheadMatrix, plan_grid_transform
+using LinearAlgebra: I
 
 @testset "DirichletPolynomial" begin
     Q = DirichletPolynomial(range(-1,1; length=4))
@@ -78,5 +79,28 @@ using PiecewiseOrthogonalPolynomials: BBBArrowheadMatrix, plan_grid_transform
         @test sprint(show, Q) == "DirichletPolynomial(-1:1)"
         @test sprint(show, C) == "ContinuousPolynomial{1}(-1:1)"
         @test sprint(show, P) == "ContinuousPolynomial{0}(-1:1)"
+    end
+
+    @testset "Dirac" begin
+        for r in (range(-1,1; length=4), 0:5, [0, 0.5, 2, 2.25, 3])
+            Q = DirichletPolynomial(r)
+            H = ContinuousPolynomial{-1}(r)
+            P = ContinuousPolynomial{0}(r)
+            n = 40
+
+            M = H'Q
+            @test M isa BBBArrowheadMatrix
+            @test (Q'H)[1:n,1:n] == M[1:n,1:n]'
+            @test M[Block(1,1)] == I
+            # pairing is consistent with conversion
+            @test (Q'H * (H \ P))[1:n,1:n] ≈ (Q'P)[1:n,1:n]
+
+            if r isa AbstractRange
+                # integration by parts: <q, f'> == -<q', f>
+                Dp = diff(P).args[2]
+                Dq = *(diff(Q).args[2:end]...)
+                @test (Q'H * Dp)[1:n,1:n] ≈ -(Dq' * grammatrix(P))[1:n,1:n]
+            end
+        end
     end
 end
